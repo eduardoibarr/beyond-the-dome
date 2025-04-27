@@ -1,43 +1,43 @@
 import pygame
 import random
-import math # Keep math import for angle calculations if needed later
+import math  # Mantém a importação do módulo 'math' para cálculos de ângulo, se necessário mais tarde
 from enum import Enum
-from settings import *
+from core.settings import *
 
-# Make sure vec is defined (usually pygame.math.Vector2)
+# Certifica-se de que 'vec' está definido (geralmente pygame.math.Vector2)
 vec = pygame.math.Vector2
 
-# Enumeração dos estados possíveis da IA
+# Enumeração dos estados possíveis da IA (Inteligência Artificial)
 class AIState(Enum):
-    IDLE = 1      # Estado de repouso - inimigo parado
-    PATROL = 2    # Estado de patrulha - movendo-se entre pontos aleatórios
-    CHASE = 3     # Estado de perseguição - seguindo o jogador
-    ATTACK = 4    # Estado de ataque - tentando causar dano ao jogador
-    SEARCH = 5    # Estado de busca - procurando o jogador após perdê-lo de vista
+    IDLE = 1      # Estado de repouso - inimigo parado.
+    PATROL = 2    # Estado de patrulha - movendo-se entre pontos aleatórios.
+    CHASE = 3     # Estado de perseguição - seguindo o jogador.
+    ATTACK = 4    # Estado de ataque - tentando causar dano ao jogador.
+    SEARCH = 5    # Estado de busca - procurando o jogador após perdê-lo de vista.
 
-# Classe base do controlador de IA
+# Classe base do controlador de IA (Inteligência Artificial)
 class AIController:
-    """Base class for controlling enemy behavior using a state machine."""
+    """Classe base para controlar o comportamento do inimigo usando uma máquina de estados."""
     def __init__(self, enemy_sprite):
         # Inicialização do controlador
-        self.enemy = enemy_sprite # Reference to the enemy sprite this AI controls
-        self.game = enemy_sprite.game # Reference to the main game object
-        self.state = AIState.PATROL   # Estado inicial é patrulha
-        self.target_position = None   # Current navigation target (world coordinates)
-        self.last_known_player_pos = None # Last seen player position
-        # Use enemy's initial position as the center for patrolling
+        self.enemy = enemy_sprite  # Referência ao sprite do inimigo que esta IA controla
+        self.game = enemy_sprite.game  # Referência ao objeto principal do jogo
+        self.state = AIState.PATROL    # Estado inicial é patrulha
+        self.target_position = None    # Alvo de navegação atual (coordenadas do mundo)
+        self.last_known_player_pos = None  # Última posição conhecida do jogador
+        # Usa a posição inicial do inimigo como centro para patrulhar
         self.patrol_center = vec(self.enemy.position)
-        self.last_attack_time = 0     # Timestamp of the last attack attempt
-        self.search_start_time = 0    # Timestamp when search state began
-        self.set_new_patrol_target()  # Define primeiro alvo de patrulha
+        self.last_attack_time = 0      # Timestamp da última tentativa de ataque
+        self.search_start_time = 0     # Timestamp de quando o estado de busca começou
+        self.set_new_patrol_target()   # Define o primeiro alvo de patrulha
 
     def alert_damage(self, source_pos):
-        """Reacts when the enemy takes damage."""
-        # If not already chasing or attacking, switch to chase the source of damage
+        """Reage quando o inimigo sofre dano."""
+        # Se não estiver já perseguindo ou atacando, muda para perseguir a fonte do dano
         if self.state not in [AIState.CHASE, AIState.ATTACK]:
-            # print(f"Enemy at {self.enemy.position} alerted, switching to CHASE towards {source_pos}")
+            # print(f"Inimigo em {self.enemy.position} foi alertado, mudando para PERSEGUIR em direção a {source_pos}")
             self.state = AIState.CHASE
-            self.last_known_player_pos = vec(source_pos) # Store as Vector2
+            self.last_known_player_pos = vec(source_pos)  # Armazena como Vector2
             self.target_position = self.last_known_player_pos
 
     def set_new_patrol_target(self):
@@ -45,39 +45,39 @@ class AIController:
         try:
             # Generate random angle and radius
             angle = random.uniform(0, 2 * math.pi) # Use math.pi
-            radius = random.uniform(ENEMY_PATROL_RADIUS * 0.2, ENEMY_PATROL_RADIUS) # Vary radius
-            # Calculate offset vector and add to patrol center
+            radius = random.uniform(ENEMY_PATROL_RADIUS * 0.2, ENEMY_PATROL_RADIUS)  # Varia o raio
+            # Calcula o vetor de deslocamento e adiciona ao centro da patrulha
             offset = vec(radius, 0).rotate_rad(angle)
             self.target_position = self.patrol_center + offset
-            # Clamp target position to stay within map bounds (optional but good practice)
+            # Fixa a posição alvo para ficar dentro dos limites do mapa (opcional, mas boa prática)
             self.target_position.x = max(TILE_SIZE, min(MAP_WIDTH - TILE_SIZE, self.target_position.x))
             self.target_position.y = max(TILE_SIZE, min(MAP_HEIGHT - TILE_SIZE, self.target_position.y))
         except Exception as e:
-            print(f"Error setting patrol target: {e}")
-            self.target_position = self.patrol_center # Default to center if error
+            print(f"Erro ao definir alvo de patrulha: {e}")
+            self.target_position = self.patrol_center  # Define como centro em caso de erro
 
     def update(self, dt):
         """
-        Updates the AI state machine and determines enemy actions.
-        This method should typically set the enemy's velocity and state.
+        Atualiza a máquina de estados da IA e determina as ações do inimigo.
+        Este método deve normalmente definir a velocidade e o estado do inimigo.
         Args:
-            dt (float): Delta time in seconds.
+            dt (float): Tempo delta em segundos.
         """
         now = pygame.time.get_ticks()
-        player_pos = vec(self.game.player.position) # Use player's precise position
+        player_pos = vec(self.game.player.position)  # Usa a posição precisa do jogador
         enemy_pos = vec(self.enemy.position)
-        distance_sq_to_player = enemy_pos.distance_squared_to(player_pos) # Use squared distance
+        distance_sq_to_player = enemy_pos.distance_squared_to(player_pos)  # Usa distância ao quadrado
 
-        # --- Determine Player Visibility ---
-        # Basic distance check
+        # --- Determina a Visibilidade do Jogador ---
+        # Checagem básica de distância
         can_see_player = distance_sq_to_player < ENEMY_DETECT_RADIUS**2
-        # TODO: Add line-of-sight check (raycasting against obstacles) for more realistic detection
+        # TODO: Adicionar verificação de linha de visão (raycasting contra obstáculos) para detecção mais realista
 
-        # --- State Machine Logic ---
-        new_velocity = vec(0, 0) # Velocity to be set for the enemy this frame
-        should_attack = False    # Flag to signal attack intention
+        # --- Lógica da Máquina de Estados ---
+        new_velocity = vec(0, 0)  # Velocidade a ser definida para o inimigo neste frame
+        should_attack = False     # Flag para sinalizar a intenção de ataque
 
-        # == PATROL STATE ==
+        # == ESTADO DE PATRULHA ==
         if self.state == AIState.PATROL:
             self.enemy.set_animation('walk') # Use walk animation for patrol
             # Check if player is detected
@@ -89,15 +89,15 @@ class AIController:
             elif self.target_position:
                 direction = self.target_position - enemy_pos
                 dist_sq_to_target = direction.length_squared()
-                patrol_speed = self.enemy.speed * 0.6 # Slower patrol speed
+                patrol_speed = self.enemy.speed * 0.6  # Velocidade de patrulha mais lenta
 
-                if dist_sq_to_target < (patrol_speed * dt * 1.5)**2: # Check if close enough
-                    self.set_new_patrol_target() # Arrived, get new target
+                if dist_sq_to_target < (patrol_speed * dt * 1.5)**2:  # Verifica se está perto o suficiente
+                    self.set_new_patrol_target()  # Chegou, pega um novo alvo
                 else:
                     new_velocity = direction.normalize() * patrol_speed
             else:
-                # No target? Get one.
-                self.set_new_patrol_target()
+                # Sem alvo? Pega um.
+                self.set_new_patrol_target() 
 
         # == SEARCH STATE ==
         elif self.state == AIState.SEARCH:
@@ -134,7 +134,7 @@ class AIController:
                  self.set_new_patrol_target()
 
         # == CHASE STATE ==
-        elif self.state == AIState.CHASE:
+        elif self.state == AIState.CHASE:  # Estado de perseguição
             self.enemy.set_animation('walk') # Use walk/run animation for chase
             # Check if player is lost
             if not can_see_player:
@@ -145,14 +145,14 @@ class AIController:
                 # print(f"Enemy at {enemy_pos} lost player, switching to SEARCH.")
             # Check if close enough to attack
             elif distance_sq_to_player < ENEMY_ATTACK_RADIUS**2:
-                self.state = AIState.ATTACK
-                new_velocity = vec(0, 0) # Stop moving to attack
-                # print(f"Enemy at {enemy_pos} in attack range, switching to ATTACK.")
-            # Continue chasing
+                self.state = AIState.ATTACK # Entra em estado de ataque
+                new_velocity = vec(0, 0) # Para de mover para atacar
+                # print(f"Inimigo em {enemy_pos} está na área de ataque, mudando para ATAQUE.")
+            # Continua perseguindo
             else:
                 self.last_known_player_pos = player_pos # Update last known position
                 direction = player_pos - enemy_pos
-                # Use full speed for chasing
+                # Usa velocidade total para perseguir
                 new_velocity = direction.normalize() * self.enemy.speed
 
         # == ATTACK STATE ==
@@ -160,30 +160,30 @@ class AIController:
             self.enemy.set_animation('attack') # Use attack animation
             # Check if player moved out of range
             if distance_sq_to_player > (ENEMY_ATTACK_RADIUS * 1.2)**2: # Add hysteresis
-                self.state = AIState.CHASE
-                self.last_known_player_pos = player_pos # Update pos before chasing again
-                # print(f"Enemy at {enemy_pos} player moved out of range, switching to CHASE.")
+                self.state = AIState.CHASE # Volta para perseguição
+                self.last_known_player_pos = player_pos  # Atualiza a posição antes de perseguir novamente
+                # print(f"Inimigo em {enemy_pos} jogador saiu da área, mudando para PERSEGUIR.")
             # Check attack cooldown
             elif now > self.last_attack_time + ENEMY_ATTACK_COOLDOWN:
-                # Check range again before attacking
+                # Verifica o alcance novamente antes de atacar
                 if distance_sq_to_player < ENEMY_ATTACK_RADIUS**2:
-                    should_attack = True # Signal intent to attack
+                    should_attack = True  # Sinaliza a intenção de atacar
                     self.last_attack_time = now
-                    # print(f"Enemy at {enemy_pos} performing attack.")
+                    # print(f"Inimigo em {enemy_pos} realizando ataque.")
                 else:
-                    # Player moved just as attack was ready, go back to chase
-                    self.state = AIState.CHASE
+                    # Jogador moveu assim que o ataque estava pronto, volta para a perseguição
+                    self.state = AIState.CHASE # Volta para a perseguição
                     self.last_known_player_pos = player_pos
 
-            # Keep velocity zero while in attack state (or add strafing/backing up logic)
+            # Mantém a velocidade zero enquanto estiver no estado de ataque (ou adiciona lógica de strafing/recuo)
             new_velocity = vec(0, 0)
 
         # --- Apply Results ---
-        # Set the calculated velocity for the enemy sprite
+        # Define a velocidade calculada para o sprite do inimigo
         self.enemy.velocity = new_velocity
 
-        # Return attack flag (Enemy's update method will call its attack function if True)
-        return should_attack
+        # Retorna o sinalizador de ataque (o método de atualização do inimigo chamará sua função de ataque se True)
+        return should_attack # Retorna se o inimigo deve atacar
 
 
 # --- Specific AI Controllers ---
@@ -200,10 +200,10 @@ class RaiderAIController(AIController):
         # Call the base class update to handle state transitions and set velocity
         should_attack = super().update(dt)
 
-        # If the base logic determined an attack should happen, tell the enemy sprite
+        # Se a lógica base determinou que um ataque deve acontecer, diz ao sprite do inimigo
         if should_attack:
             if hasattr(self.enemy, 'attack'): # Check if enemy has attack method
-                 self.enemy.attack() # Call the Raider's specific attack method
+                 self.enemy.attack() # Chama o método de ataque específico do Raider
             else:
                  print(f"Warning: {type(self.enemy).__name__} AI signaled attack, but sprite has no attack() method.")
 
@@ -229,14 +229,14 @@ class WildDogAIController(AIController):
         # Trigger attack if needed
         if should_attack:
             if hasattr(self.enemy, 'attack'):
-                 self.enemy.attack()
+                 self.enemy.attack() # Chama o método de ataque do Wild Dog
             else:
-                 print(f"Warning: {type(self.enemy).__name__} AI signaled attack, but sprite has no attack() method.")
+                 print(f"Aviso: {type(self.enemy).__name__} AI sinalizou ataque, mas sprite não possui método attack().")
 
         # Add dog-specific behaviors here.
-        # Example: Random erratic movement during chase?
+        # Exemplo: Movimento errático aleatório durante a perseguição?
         # if self.state == AIState.CHASE and random.random() < 0.1:
-        #     # Add a small perpendicular velocity component for zig-zag
+        #     # Adiciona um pequeno componente de velocidade perpendicular para zig-zag
         #     if self.enemy.velocity.length_squared() > 0:
-        #          perp_vec = self.enemy.velocity.rotate(random.choice([-90, 90]))
-        #          self.enemy.velocity += perp_vec * 0.2 # Add small zig-zag component
+        #          perp_vec = self.enemy.velocity.rotate(random.choice([-90, 90])) # Gira aleatoriamente -90 ou 90
+        #          self.enemy.velocity += perp_vec * 0.2 # Adiciona pequeno componente zig-zag

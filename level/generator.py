@@ -1,46 +1,46 @@
 import pygame
 import random
 import math
-# Import settings relative to project root
+# Importar configurações relativas à raiz do projeto
 from core.settings import *
 from utils.drawing import simple_noise
 from entities.tile import Tile
 from entities.obstacle import Obstacle, Water
 from entities.radioactive_zone import RadioactiveZone
-# Import camera from its new location
+# Importar a câmera de sua nova localização
 from graphics.camera import Camera
 
 class LevelGenerator:
-    """Generates the procedural game world layout and populates it with tiles."""
+    """Gera o layout procedural do mundo do jogo e o preenche com tiles."""
     def __init__(self, game):
         """
-        Initializes the LevelGenerator.
+        Inicializa o LevelGenerator.
         Args:
-            game: Reference to the main game object.
+            game: Referência para o objeto principal do jogo.
         """
         self.game = game
-        # Calculate map dimensions in tiles
+        # Calcular as dimensões do mapa em tiles
         self.world_width_tiles = MAP_WIDTH // TILE_SIZE
         self.world_height_tiles = MAP_HEIGHT // TILE_SIZE
-        self.layout = [] # 2D list representing the tile types
-        # Ensure spawn point is calculated correctly based on tile dimensions
+        self.layout = [] # Lista 2D representando os tipos de tile
+        # Garantir que o ponto de spawn seja calculado corretamente com base nas dimensões do tile
         self.spawn_point = (self.world_width_tiles // 2, self.world_height_tiles // 2)
-        self.industrial_centers = [] # Keep track of placed industrial zones
+        self.industrial_centers = [] # Manter o controle das zonas industriais colocadas
 
     def generate_layout(self):
         """
-        Generates the 2D layout grid for the world using noise functions.
+        Gera a grade de layout 2D para o mundo usando funções de ruído.
         Returns:
-            list[list[str]]: The generated 2D layout grid.
+            list[list[str]]: A grade de layout 2D gerada.
         """
-        print("Generating level layout...")
-        # Initialize layout with a base terrain type (e.g., grass)
+        print("Gerando layout do nível...")
+        # Inicializar o layout com um tipo de terreno base (ex: grama)
         self.layout = [['grass' for _ in range(self.world_width_tiles)] for _ in range(self.world_height_tiles)]
-        self.industrial_centers = [] # Reset for new generation
+        self.industrial_centers = [] # Redefinir para nova geração
 
-        # --- Noise Setup ---
-        seed1 = random.random() * 100 # Base terrain / elevation
-        seed2 = random.random() * 100 # Water bodies
+        # --- Configuração do Ruído ---
+        seed1 = random.random() * 100 # Terreno base / elevação
+        seed2 = random.random() * 100 # Corpos d'água
         seed3 = random.random() * 100 # Forests / Trees
         seed4 = random.random() * 100 # Industrial zone placement noise
         terrain_scale = 80.0
@@ -48,8 +48,8 @@ class LevelGenerator:
         forest_scale = 60.0
         industrial_placement_scale = 150.0
 
-        # --- Generate Base Terrain (Water, Dirt, Grass) ---
-        print("Generating base terrain...")
+        # --- Gerar Terreno Base (Água, Terra, Grama) ---
+        print("Gerando terreno base...")
         for y in range(self.world_height_tiles):
             for x in range(self.world_width_tiles):
                 terrain_value = simple_noise(x, y, seed1, scale=terrain_scale)
@@ -60,40 +60,40 @@ class LevelGenerator:
                     self.layout[y][x] = 'dirt'
                 # Else remains 'grass'
 
-        # --- Generate Forests ---
-        print("Generating forests...")
+        # --- Gerar Florestas ---
+        print("Gerando florestas...")
         for y in range(self.world_height_tiles):
             for x in range(self.world_width_tiles):
                 if self.layout[y][x] == 'grass':
                     forest_value = simple_noise(x, y, seed3, scale=forest_scale)
                     if forest_value > 0.55:
-                        self.layout[y][x] = 'tree'
+                        self.layout[y][x] = 'tree' # Adicionando árvores
 
-        # --- Generate Industrial Zones ---
-        print("Generating industrial zones...")
+        # --- Gerar Zonas Industriais ---
+        print("Gerando zonas industriais...")
         self._add_industrial_zones(seed4, industrial_placement_scale)
 
-        # --- Generate Urban Zones ---
-        print("Generating urban zones...")
+        # --- Gerar Zonas Urbanas ---
+        print("Gerando zonas urbanas...")
         self._add_urban_zones()
 
-        # --- Generate Radioactive Zones ---
-        print("Generating radioactive zones...")
+        # --- Gerar Zonas Radioativas ---
+        print("Gerando zonas radioativas...")
         self._add_radioactive_zones()
 
-        # --- Clear Spawn Area ---
-        print("Clearing spawn area...")
-        # Ensure spawn point is valid before clearing
+        # --- Limpar Área de Spawn ---
+        print("Limpando área de spawn...")
+        # Garantir que o ponto de spawn seja válido antes de limpar
         if not (0 <= self.spawn_point[0] < self.world_width_tiles and 0 <= self.spawn_point[1] < self.world_height_tiles):
-             print(f"Warning: Initial spawn point {self.spawn_point} is outside map bounds. Resetting to center.")
+             print(f"Aviso: O ponto de spawn inicial {self.spawn_point} está fora dos limites do mapa. Redefinindo para o centro.")
              self.spawn_point = (self.world_width_tiles // 2, self.world_height_tiles // 2)
         self._clear_spawn_area(radius=7)
 
-        # --- Add Map Borders ---
-        print("Adding map borders...")
+        # --- Adicionar Bordas do Mapa ---
+        print("Adicionando bordas do mapa...")
         self._add_map_borders()
 
-        print("Layout generation complete.")
+        print("Geração do layout completa.")
         return self.layout
 
     def _clear_spawn_area(self, radius=5):
@@ -110,7 +110,7 @@ class LevelGenerator:
 
         for y in range(start_y, end_y):
             for x in range(start_x, end_x):
-                # Check bounds just in case
+                # Verificar limites por precaução
                 if 0 <= y < self.world_height_tiles and 0 <= x < self.world_width_tiles:
                     dist_sq = (x - spawn_x)**2 + (y - spawn_y)**2
                     if dist_sq <= radius**2: # Circular clear zone
@@ -119,23 +119,23 @@ class LevelGenerator:
 
     def _add_map_borders(self):
         """Adds an impassable border around the entire map."""
-        if self.world_height_tiles <= 0 or self.world_width_tiles <= 0: return # No map to border
+        if self.world_height_tiles <= 0 or self.world_width_tiles <= 0: return # Sem mapa para bordar
 
-        # Top and Bottom borders
+        # Bordas Superior e Inferior
         for x in range(self.world_width_tiles):
             if self.world_height_tiles > 0: self.layout[0][x] = 'wall'
             if self.world_height_tiles > 1: self.layout[self.world_height_tiles - 1][x] = 'wall'
-        # Left and Right borders
+        # Bordas Esquerda e Direita
         for y in range(self.world_height_tiles):
             if self.world_width_tiles > 0: self.layout[y][0] = 'wall'
             if self.world_width_tiles > 1: self.layout[y][self.world_width_tiles - 1] = 'wall'
 
     def _add_industrial_zones(self, seed, scale):
-        """Adds several complex industrial zones to the map."""
+        """Adiciona várias zonas industriais complexas ao mapa."""
         num_zones = random.randint(3, 6)
-        print(f"  Attempting to place {num_zones} industrial zones...")
+        print(f"  Tentando colocar {num_zones} zonas industriais...")
         min_dist_between_zones = 40
-        min_dist_from_spawn = 30
+        min_dist_from_spawn = 30 # Distância mínima do spawn
         padding = max(15, self.world_width_tiles // 8) # Ensure padding is reasonable
 
         for zone_index in range(num_zones):
@@ -160,21 +160,21 @@ class LevelGenerator:
                     if dist < zone_size + other_size + min_dist_between_zones:
                         too_close_to_other = True; break
                 if too_close_to_other: continue
+                
+                if self.layout[zone_y][zone_x] == 'water': continue # Evitar o centro na água
 
-                if self.layout[zone_y][zone_x] == 'water': continue # Avoid center in water
-
-                print(f"    Placing zone {zone_index+1} at ({zone_x}, {zone_y}) size {zone_size}")
+                print(f"    Colocando zona {zone_index+1} em ({zone_x}, {zone_y}) tamanho {zone_size}")
                 self.industrial_centers.append((zone_x, zone_y, zone_size))
                 zone_type = random.choice(["factory", "refinery", "power_plant", "warehouse", "mine"])
-                print(f"      Type: {zone_type}")
+                print(f"      Tipo: {zone_type}")
 
                 self._create_industrial_floor(zone_x, zone_y, zone_size)
                 self._add_specific_industrial_structures(zone_x, zone_y, zone_size, zone_type)
                 self._add_industrial_perimeter(zone_x, zone_y, zone_size)
                 self._create_transition_zone(zone_x, zone_y, zone_size)
                 self._add_environmental_effects(zone_x, zone_y, zone_size)
-                placed = True; break
-            if not placed: print(f"    Could not find suitable location for zone {zone_index+1}.")
+                placed = True; break # Colocado com sucesso, passar para a próxima zona
+            if not placed: print(f"    Não foi possível encontrar uma localização adequada para a zona {zone_index+1}.")
 
     def _create_industrial_floor(self, center_x, center_y, radius):
         """Creates an irregular concrete floor area."""
@@ -198,7 +198,7 @@ class LevelGenerator:
 
     def _add_specific_industrial_structures(self, center_x, center_y, zone_size, zone_type):
         """Adds structures like buildings, tanks, machines based on zone type."""
-        # Implementações das estruturas específicas para cada tipo de zona industrial
+        # Implementação das estruturas específicas para cada tipo de zona industrial
         # (factory, refinery, power_plant, warehouse, mine)
         pass
 
@@ -206,10 +206,10 @@ class LevelGenerator:
         """Checks if a rectangular area contains only allowed tile types."""
         for y in range(start_y, start_y + height):
             for x in range(start_x, start_x + width):
-                if not (0 <= y < self.world_height_tiles and 0 <= x < self.world_width_tiles):
-                    return False # Out of bounds
+                if not (0 <= y < self.world_height_tiles and 0 <= x < self.world_width_tiles): 
+                    return False # Fora dos limites
                 if self.layout[y][x] not in allowed_tiles:
-                    return False # Contains disallowed tile
+                    return False # Contém tile não permitido
         return True
 
     def _create_rect_structure(self, start_x, start_y, width, height, structure_type, place_on_tiles, border_type=None):
@@ -261,16 +261,16 @@ class LevelGenerator:
         """Adds patches of radioactive terrain."""
         num_zones = random.randint(2, 5)
         print(f"  Attempting to place {num_zones} radioactive zones...")
-        min_dist_from_spawn = 20
+        min_dist_from_spawn = 20 # Distância mínima do spawn
 
         for _ in range(num_zones):
             placed = False
-            for attempt in range(30):
+            for attempt in range(30): # Tentar até 30 vezes
                 zone_x = random.randint(self.world_width_tiles // 8, self.world_width_tiles * 7 // 8)
                 zone_y = random.randint(self.world_height_tiles // 8, self.world_height_tiles * 7 // 8)
                 zone_radius = random.randint(4, 8)
 
-                spawn_dist = math.sqrt((zone_x - self.spawn_point[0])**2 + (zone_y - self.spawn_point[1])**2)
+                spawn_dist = math.sqrt((zone_x - self.spawn_point[0])**2 + (zone_y - self.spawn_point[1])**2) # Distância para o spawn
                 if spawn_dist < zone_radius + min_dist_from_spawn: continue
 
                 # print(f"    Placing radioactive zone at ({zone_x}, {zone_y}) radius {zone_radius}")
@@ -283,7 +283,7 @@ class LevelGenerator:
                                 self.layout[y][x] = 'radioactive'
                 placed = True; break
             # if not placed: print("    Could not place radioactive zone.")
-
+        
     def _add_industrial_perimeter(self, center_x, center_y, zone_size):
         """Adds barriers around the edge of an industrial zone."""
         # Implementação da adição de perímetros industriais
@@ -300,27 +300,27 @@ class LevelGenerator:
         pass
 
     def create_level(self):
-        """
-        Generates the layout and creates all the necessary Tile sprites.
+        """Gera o layout e cria todos os sprites de Tile necessários.
+        
         Returns:
-            tuple: The (x, y) tile coordinates for player spawn.
+            tuple: As coordenadas (x, y) do tile para o spawn do jogador.
         """
         layout = self.generate_layout()
 
-        # Define which tile kinds are obstacles (used by Obstacle class check)
+        # Definir quais tipos de tile são obstáculos (usado pela verificação da classe Obstacle)
         obstacle_types = [
             'wall', 'barrier', 'tree', 'building', 'machine', 'pipe',
             'tank', 'crane', 'generator', 'cooling_tower', 'conveyor', 'chimney'
-            # Note: 'water' is handled separately via the Water class inheriting Obstacle
+            # Nota: 'water' é tratado separadamente através da classe Water que herda de Obstacle
         ]
 
-        print("Creating sprites from layout...")
-        # Iterate through the generated layout and create sprites
-        # Ensure game groups exist
+        print("Criando sprites a partir do layout...")
+        # Iterar através do layout gerado e criar sprites
+        # Garantir que os grupos do jogo existam
         if not hasattr(self.game, 'all_sprites'): self.game.all_sprites = pygame.sprite.Group()
         if not hasattr(self.game, 'world_tiles'): self.game.world_tiles = pygame.sprite.Group()
         if not hasattr(self.game, 'obstacles'): self.game.obstacles = pygame.sprite.Group()
-        if not hasattr(self.game, 'radioactive_zones'): self.game.radioactive_zones = pygame.sprite.Group()
+        if not hasattr(self.game, 'radioactive_zones'): self.game.radioactive_zones = pygame.sprite.Group() # Grupo para as areas radioativas
         if not hasattr(self.game, 'items'): self.game.items = pygame.sprite.Group()
 
 
@@ -338,18 +338,18 @@ class LevelGenerator:
                     Water(self.game, x, y, common_groups) # Water is an Obstacle
                 # else: tile_type might be None or an unhandled type - implicitly empty/ignored
 
-        # Add collectible items (Filter Modules)
-        print("Adding filter modules...")
-        self._add_filter_modules(num_modules=FILTER_MODULE_COUNT) # Use constant from settings
+        # Adicionar itens coletáveis (Módulos de Filtro)
+        print("Adicionando módulos de filtro...")
+        self._add_filter_modules(num_modules=FILTER_MODULE_COUNT) # Usar constante das configurações
 
-        # Configure the camera based on the final map size
+        # Configurar a câmera com base no tamanho final do mapa
         self.game.camera = Camera(MAP_WIDTH, MAP_HEIGHT)
 
-        print("Level creation complete.")
-        # Ensure spawn point is valid tile coordinates
+        print("Criação do nível completa.")
+        # Garantir que o ponto de spawn tenha coordenadas de tile válidas
         spawn_tile_x = max(0, min(self.world_width_tiles - 1, self.spawn_point[0]))
         spawn_tile_y = max(0, min(self.world_height_tiles - 1, self.spawn_point[1]))
-        print(f"Player spawn tile: ({spawn_tile_x}, {spawn_tile_y})")
+        print(f"Tile de spawn do jogador: ({spawn_tile_x}, {spawn_tile_y})")
         return (spawn_tile_x, spawn_tile_y)
 
 

@@ -3,53 +3,15 @@ import math
 import random # Needed for WildDog random movement
 from core.settings import *
 
-# --- Import Dependencies (Ensure these files exist and contain the required classes) ---
-try:
-    from core.ai.ai import RaiderAIController, WildDogAIController
-except ImportError:
-    print("Warning: Could not import AI controllers from 'core/ai/ai.py'. Enemy AI will not function.")
-    # Define dummy classes if ai.py is missing to avoid crashing
-    class RaiderAIController:
-        def __init__(self, enemy): pass
-        def update(self, dt): pass
-        def alert_damage(self, source_pos): pass
-    class WildDogAIController:
-        def __init__(self, enemy): pass
-        def update(self, dt): pass
-        def alert_damage(self, source_pos): pass
-
-try:
-    from items.weapons import Pistol
-except ImportError:
-    print("Warning: Could not import Pistol from 'items/weapons.py'. Player weapon will not function.")
-    # Define dummy class
-    class Pistol:
-        def __init__(self, game, player): self.reloading = False; self.ammo_in_mag = 0
-        def update(self, dt): pass
-        def draw(self, screen, camera): pass
-        def shoot(self, target_pos): pass
-        def start_reload(self): pass
+from core.ai.ai import RaiderAIController, WildDogAIController
+from items.weapons import Pistol
+from graphics.particles import BloodParticleSystem
+from graphics.spritesheet import Spritesheet
 
 
-try:
-    from graphics.particles import BloodParticleSystem
-except ImportError:
-    print("Warning: Could not import BloodParticleSystem from 'graphics/particles.py'. Blood effects will not function.")
-    # Define dummy class
-    class BloodParticleSystem:
-        def __init__(self): pass
-        def add_particles(self, x, y, count=0): pass
-        def update(self, dt): pass
-        def draw(self, screen, camera): pass
 
-try:
-    from graphics.spritesheet import Spritesheet
-except ImportError:
-     print("Warning: Could not import Spritesheet from 'graphics/spritesheet.py'. Animations require this.")
-     # Define dummy class
-     class Spritesheet:
-         def __init__(self, filename): pass
-         def load_strip(self, rect, image_count, colorkey=None): return [] # Return empty list
+
+
 
 
 vec = pygame.math.Vector2
@@ -64,7 +26,7 @@ try:
 
     # Check if the dummy class is being used
     if 'Spritesheet' in locals() and not hasattr(Spritesheet, 'load_strip'):
-         raise ImportError("Spritesheet class is a dummy, cannot load animations.")
+         raise ImportError("A classe Spritesheet é um substituto, não é possível carregar animações.")
 
     player_sprites = {
         # Create a Spritesheet object for each distinct spritesheet file used by the player
@@ -94,16 +56,16 @@ try:
     enemy_sprites[ANIM_ENEMY_SLASH] = enemy_sprites[SPRITESHEET_KEY_BASE]
 
     SPRITESHEETS_LOADED = True
-    print("Spritesheets loaded successfully.")
+    print("Spritesheets carregados com sucesso.")
 
 except ImportError:
      # Handled above by dummy class definitions
      pass # Keep SPRITESHEETS_LOADED as False
 except FileNotFoundError as e:
-    print(f"Error loading spritesheet file: {e}. Animations disabled.")
-    print("Please ensure spritesheet files exist at the specified paths.")
+    print(f"Erro ao carregar o arquivo spritesheet: {e}. Animações desativadas.")
+    print("Certifique-se de que os arquivos spritesheet existem nos caminhos especificados.")
 except pygame.error as e:
-    print(f"Pygame error loading spritesheet image: {e}. Animations disabled.")
+    print(f"Erro do Pygame ao carregar a imagem spritesheet: {e}. Animações desativadas.")
 except Exception as e:
     print(f"An unexpected error occurred loading spritesheets: {e}. Animations disabled.")
 
@@ -144,7 +106,7 @@ class Player(pygame.sprite.Sprite):
 
                 # Validate loaded animations
                 if not self.animations[ANIM_PLAYER_IDLE]: # Check if idle animation loaded
-                     raise ValueError(f"Failed to load '{ANIM_PLAYER_IDLE}' animation frames.")
+                     raise ValueError(f"Falha ao carregar os quadros de animação '{ANIM_PLAYER_IDLE}'.")
 
                 self.current_animation = ANIM_PLAYER_IDLE
                 self.animation_frame = 0
@@ -153,14 +115,14 @@ class Player(pygame.sprite.Sprite):
                 self.image = self.animations[self.current_animation][0] # Set initial image
 
             except (KeyError, AttributeError, ValueError, Exception) as e:
-                print(f"Error setting up player animations: {e}. Disabling animations.")
+                print(f"Erro ao configurar as animações do jogador: {e}. Desativando animações.")
                 SPRITESHEETS_LOADED = False # Disable animation if setup fails
                 self.animations = {}
                 self.current_animation = None
 
         # Fallback if spritesheets failed to load or setup failed
         if not self.current_animation:
-            print("Player animations disabled or failed. Using fallback.")
+            print("Animações do jogador desativadas ou falharam. Usando fallback.")
             self.image = pygame.Surface((PLAYER_WIDTH, PLAYER_HEIGHT))
             self.image.fill(PLAYER_COLOR)
             self.image.set_colorkey(BLACK) # Optional transparency
@@ -212,7 +174,7 @@ class Player(pygame.sprite.Sprite):
             # self.game.sound_manager.play('player_hurt')
 
             if self.health <= 0:
-                print("Player died!")
+                print("Jogador morreu!")
                 # Game loop in main.py handles stopping by checking self.game.playing
 
     def set_animation(self, animation_name):
@@ -229,7 +191,7 @@ class Player(pygame.sprite.Sprite):
             self.animation_frame = 0
             self.animation_timer = 0
         else:
-            # print(f"Warning: Animation '{animation_name}' not found for player.")
+            # print(f"Aviso: Animação '{animation_name}' não encontrada para o jogador.")
             if ANIM_PLAYER_IDLE in self.animations: # Check if idle exists before defaulting
                  self.current_animation = ANIM_PLAYER_IDLE
             else:
@@ -278,7 +240,7 @@ class Player(pygame.sprite.Sprite):
             try:
                 # Use a copy to avoid modifying the original frame in self.animations
                 temp_image = self.image.copy()
-                temp_image.fill((255, 255, 255, alpha), special_flags=pygame.BLEND_RGBA_MULT)
+                temp_image.fill((255, 255, 255, alpha), special_flags=pygame.BLEND_RGBA_MULT) #
                 self.image = temp_image
             except pygame.error as e:
                  # Fallback if BLEND_RGBA_MULT fails (e.g., surface format issue)
@@ -435,7 +397,7 @@ class Player(pygame.sprite.Sprite):
         if self.current_animation == ANIM_PLAYER_ATTACK: return # Prevent re-triggering during animation
 
         self.set_animation(ANIM_PLAYER_ATTACK)
-        # Play attack sound
+        # Tocar som de ataque
         # print("Player attacks!") # Placeholder
 
         # --- Simple Hitbox Check (Placeholder) ---
@@ -536,7 +498,7 @@ class Player(pygame.sprite.Sprite):
 
     def collect_filter_module(self):
         """Activates the filter module effect."""
-        print("Player collected filter module!")
+        print("Jogador coletou o módulo de filtro!")
         self.has_filter_module = True
 
 
@@ -607,7 +569,7 @@ class Enemy(pygame.sprite.Sprite):
             self.image = self.animations[ANIM_ENEMY_IDLE][0]
             self.original_image = self.image
             self.rect = self.image.get_rect(center=self.position)
-            print(f"Animations loaded for {type(self).__name__}")
+            print(f"Animações carregadas para {type(self).__name__}")
             return True
 
         except (KeyError, AttributeError, ValueError, Exception) as e:
@@ -629,7 +591,7 @@ class Enemy(pygame.sprite.Sprite):
              self.animation_frame = 0
              self.animation_timer = 0
         else:
-             # print(f"Warning: Anim '{animation_name}' not found for {type(self).__name__}")
+             # print(f"Aviso: Animação '{animation_name}' não encontrada para {type(self).__name__}")
              if ANIM_ENEMY_IDLE in self.animations: self.current_animation = ANIM_ENEMY_IDLE
 
 
@@ -711,8 +673,6 @@ class Enemy(pygame.sprite.Sprite):
         self.set_animation(ANIM_ENEMY_HURT)
         # self.last_hit_time = now
         # self.invincible = True
-
-        # Notify AI controller about the damage event
         if self.ai_controller:
             # Provide the player's position as the likely source
             self.ai_controller.alert_damage(self.game.player.position)
@@ -821,7 +781,7 @@ class Raider(Enemy):
         if self.current_animation == ANIM_ENEMY_SLASH: return # Don't re-attack mid-swing
 
         self.set_animation(ANIM_ENEMY_SLASH)
-        # Play attack sound
+        # Tocar som de ataque
         # print(f"Raider at {self.position} attacks!")
 
         # --- Simple Hitbox Check (Placeholder) ---
@@ -872,7 +832,7 @@ class WildDog(Enemy):
         if self.current_animation == ANIM_ENEMY_SLASH: return
 
         self.set_animation(ANIM_ENEMY_SLASH) # Use a bite/lunge animation
-        # Play bite sound
+        # Tocar som de mordida
         # print(f"Wild Dog at {self.position} bites!")
 
         # Simple proximity check for bite

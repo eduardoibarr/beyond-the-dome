@@ -1,6 +1,6 @@
 import pygame
 import sys
-# Use imports relativos dentro do pacote 'core' para módulos irmãos
+# Use importações relativas dentro do pacote 'core' para módulos irmãos
 from .settings import (
     WIDTH, HEIGHT, TITLE, FPS,
     HUD_FONT_SIZE, INTRO_TITLE_FONT_SIZE, INTRO_FONT_SIZE, # Use constantes de tamanho
@@ -10,10 +10,10 @@ from .settings import (
 from .audio_manager import AudioManager
 from .spawner import spawn_initial_enemies
 
-# Imports de outros pacotes
+# Importações de outros pacotes
 from graphics.sprites import Player # Assumindo que Player é necessário para dica de tipo/verificação
-from level.generator import LevelGenerator # Import corrigido
-from graphics.camera import Camera # Import corrigido
+from level.generator import LevelGenerator # Importação corrigida
+from graphics.camera import Camera # Importação corrigida
 from graphics.ui.screens import display_intro, show_start_screen, show_go_screen
 from graphics.ui.hud import draw_hud
 
@@ -22,7 +22,7 @@ class Game:
         """Inicializa o Pygame, a tela, o relógio, as fontes e os gerenciadores."""
         pygame.init()
         # Inicializa o mixer de som *antes* de carregar os sons
-        pygame.mixer.init()
+        #pygame.mixer.init()
 
         self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
         pygame.display.set_caption(TITLE)
@@ -36,7 +36,7 @@ class Game:
         self.load_fonts()
 
         # Inicializa os Gerenciadores
-        self.audio_manager = AudioManager()
+        #self.audio_manager = AudioManager()
         # Os grupos de sprites serão inicializados em new()
         self.all_sprites = None
         self.world_tiles = None
@@ -145,7 +145,7 @@ class Game:
         for enemy in enemy_hits:
             if hasattr(enemy, 'damage'):
                 self.player.take_damage(enemy.damage)
-            # else: print warning?
+            # else: imprimir aviso?
 
         # Balas vs Inimigos/Obstáculos (Processado em Bullet.update)
 
@@ -195,7 +195,7 @@ class Game:
                       # Assume que draw personalizado lida com a câmera se necessário (como Enemy)
                       # sprite.draw(self.screen, self.camera) # Já chamado via update? Não.
                       pass # Inimigos desenhados via grupo enemy abaixo
-                 elif hasattr(sprite, 'image'): # Desenha outros sprites (como Bullets)
+                 elif hasattr(sprite, 'image'): # Desenha outros sprites (como Balas)
                      self.screen.blit(sprite.image, self.camera.apply(sprite))
 
         # Desenho explícito para o jogador (garante camadas corretas) 

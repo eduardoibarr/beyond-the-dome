@@ -1,1 +1,1 @@
-# items package 
+# Pacote de itens

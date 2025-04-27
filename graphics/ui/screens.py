@@ -1,17 +1,17 @@
 import pygame
 import math
-import threading # Necessário para fade do áudio da introdução
-# from settings import * # Substituído por imports explícitos
-from settings import (
-    WIDTH, HEIGHT, FPS, BLACK, WHITE, GREY, TITLE, # Removido FONT_NAME
+import threading  # Necessário para o fade do áudio da introdução
+# from settings import * # Substituído por imports explícitos (substituído por imports explícitos)
+from core.settings import (
+    WIDTH, HEIGHT, FPS, TITLE, BLACK, WHITE, RED, GREEN, BLUE, YELLOW, CYAN, LIGHTBLUE, DARKGREY, LIGHTGREY, GREY, INTRO_TITLE_FONT_SIZE, INTRO_FONT_SIZE, PROMPT_FONT_SIZE, GAME_OVER_FONT_SIZE,
     # Importa constantes específicas de tamanho de fonte se necessário diretamente, ou confia nos objetos game.font
     # Por simplicidade, assume que funções usam game.font, game.intro_font etc.
 )
 
 # --- Funções Auxiliares de Desenho/Animação (Movidas de Game) ---
-
+    
 def create_vignette(screen_width, screen_height, color=(0, 0, 0)):
-    """Cria uma sobreposição de vinheta (bordas escuras)."""
+    """Cria uma sobreposição de vinheta (bordas escuras)."""  # Mantive em português
     vignette = pygame.Surface((screen_width, screen_height), pygame.SRCALPHA)
     center_x, center_y = screen_width // 2, screen_height // 2
     max_dist = math.sqrt(center_x**2 + center_y**2)
@@ -24,11 +24,11 @@ def create_vignette(screen_width, screen_height, color=(0, 0, 0)):
     return vignette
 
 def fade_in_surface(game, surface, rect, duration, keep_previous=False):
-    """Faz fade in de uma superfície mantendo a vinheta e elementos anteriores."""
+    """Faz fade in de uma superfície mantendo a vinheta e elementos anteriores.""" # Mantive em português
     start_time = pygame.time.get_ticks()
     vignette = create_vignette(WIDTH, HEIGHT)
     orig_alpha = surface.get_alpha()
-    if orig_alpha is None: orig_alpha = 255 # Lida com superfícies sem alpha explícito
+    if orig_alpha is None: orig_alpha = 255 # Lida com superfícies sem alpha explícito (Mantive em português)
 
     previous_screen = game.screen.copy() if keep_previous else None
 
@@ -49,15 +49,15 @@ def fade_in_surface(game, surface, rect, duration, keep_previous=False):
         pygame.display.flip()
         game.clock.tick(FPS)
 
-        # Verifica se deve encerrar
+        # Verifica se deve encerrar (Mantive em português)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                game.running = False # Sinaliza para o jogo parar
-                return False # Indica encerramento
+                game.running = False # Sinaliza para o jogo parar (Mantive em português)
+                return False # Indica encerramento (Mantive em português)
             if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 game.running = False
                 return False
-    return True # Indica sucesso
+    return True # Indica sucesso (Mantive em português)
 
 def animate_text_line(game, text_surf, final_rect, duration, keep_previous=True):
     """Anima linha de texto com fade-in e movimento suave."""
@@ -104,7 +104,7 @@ def animate_text_line(game, text_surf, final_rect, duration, keep_previous=True)
     return True
 
 def wait_time(game, duration):
-    """Aguarda duração especificada enquanto verifica eventos de encerramento."""
+    """Aguarda duração especificada enquanto verifica eventos de encerramento.""" # Mantive em português
     start_time = pygame.time.get_ticks()
     while pygame.time.get_ticks() - start_time < duration:
         for event in pygame.event.get():
@@ -118,9 +118,9 @@ def wait_time(game, duration):
     return True
 
 def wait_for_keypress_with_animation(game, vignette, title_surface, title_rect, text_surfaces, start_y):
-    """Mostra animação de prompt e aguarda pressionamento de tecla."""
-    prompt_text = "PRESSIONE ENTER"
-    prompt_surface = game.prompt_font.render(prompt_text, True, GREY)
+    """Mostra animação de prompt e aguarda pressionamento de tecla.""" # Mantive em português
+    prompt_text = "PRESSIONE ENTER" # Mantive em português
+    prompt_surface = game.prompt_font.render(prompt_text, True, GREY) # Mantive em português
     prompt_rect = prompt_surface.get_rect(center=(WIDTH // 2, HEIGHT - 50))
 
     waiting = True
@@ -165,7 +165,7 @@ def wait_for_keypress_with_animation(game, vignette, title_surface, title_rect, 
     return True
 
 def fade_out_everything(game, vignette, fade_duration=800):
-    """Faz fade out de toda a tela."""
+    """Faz fade out de toda a tela.""" # Mantive em português
     current_screen = game.screen.copy()
     start_time = pygame.time.get_ticks()
     while pygame.time.get_ticks() - start_time < fade_duration:
@@ -192,7 +192,7 @@ def fade_out_everything(game, vignette, fade_duration=800):
 # --- Funções Principais das Telas ---
 
 def display_intro(game):
-    """Sequência de introdução no estilo AAA."""
+    """Sequência de introdução no estilo AAA.""" # Mantive em português
     # ... (Copia o conteúdo de display_intro de main.py aqui) ...
     # ... (Substitui self. por game. quando necessário) ...
     intro_scenes = [
@@ -218,7 +218,7 @@ def display_intro(game):
     line_transition_duration = 300
 
     intro_sound = None
-    if hasattr(game, 'audio_manager'): # Verifica se o gerenciador de áudio existe
+    if hasattr(game, 'audio_manager'): # Verifica se o gerenciador de áudio existe (Mantive em português)
         intro_sound = game.audio_manager.play('intro', volume=0.0, loop=True)
         if intro_sound:
             game.audio_manager.fade(intro_sound, 0.0, 0.7, 2000)
@@ -281,7 +281,7 @@ def display_intro(game):
     pygame.display.flip()
 
 def show_start_screen(game):
-    """Displays the start screen with improved visuals."""
+    """Exibe a tela inicial com visuais melhorados.""" # Traduzi para pt-br
     # ... (Copia o conteúdo de show_start_screen de main.py aqui) ...
     # ... (Substitui self. por game. quando necessário) ...
     gradient_surface = pygame.Surface((WIDTH, HEIGHT))
@@ -348,7 +348,7 @@ def show_start_screen(game):
     wait_for_key(game) # Pass game object
 
 def show_go_screen(game):
-    """Displays the Game Over screen with improved visuals."""
+    """Exibe a tela de Game Over com visuais melhorados."""  # Traduzi para pt-br
     # ... (Copia o conteúdo de show_go_screen de main.py aqui) ...
     # ... (Substitui self. por game. quando necessário) ...
     if not game.running:
@@ -375,7 +375,7 @@ def show_go_screen(game):
         char_text = title_font.render(char, True, (200, 0, 0))
         shadow_text = title_font.render(char, True, (60, 0, 0))
         game.screen.blit(char_text, (WIDTH/2 - char_text.get_width()/2, HEIGHT/3 + i*char_text.get_height()))
-        game.screen.blit(shadow_text, (WIDTH/2 - shadow_text.get_width()/2, HEIGHT/3 + i*shadow_text.get_height() + 1))
+        game.screen.blit(shadow_text, (WIDTH/2 - shadow_text.get_width()/2, HEIGHT/3 + i*shadow_text.get_height() + 1)) # Mantive em português
 
     if game.cause_of_death:
         death_font = game.font
@@ -400,7 +400,7 @@ def show_go_screen(game):
     wait_for_key(game, pygame.K_RETURN)
 
 def wait_for_key(game, specific_key=None):
-    """Waits for any key press or a specific key press."""
+    """Aguarda qualquer pressionamento de tecla ou um pressionamento de tecla específico.""" # Traduzi para pt-br
     waiting = True
     while waiting:
         game.clock.tick(FPS)
@@ -415,4 +415,4 @@ def wait_for_key(game, specific_key=None):
                     waiting = False
                 elif event.key == pygame.K_ESCAPE:
                      waiting = False
-                     game.running = False # Allow escape to quit here too 
+                     game.running = False # Permite que escape saia aqui também (Traduzi para pt-br)

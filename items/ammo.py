@@ -1,33 +1,30 @@
 import pygame
 import math
 import random
-from settings import *
+from core.settings import *
 from items.item import Item
 from particles import ParticleSystem
 
 class Ammo(Item):
-    """
-    Ammo pickup that gives player ammunition when collected.
-    """
+    """Coletável de munição que fornece munição ao jogador quando coletado."""
     def __init__(self, game, x, y, ammo_amount=20, ammo_type="standard", groups=None):
-        """
-        Initialize an ammo pickup.
+        """Inicializa um coletável de munição.
         
-        Args:
-            game: Reference to the main game object
-            x (int): X position in world coordinates
-            y (int): Y position in world coordinates
-            ammo_amount (int): Amount of ammo to give when collected
-            ammo_type (str): Type of ammunition ("standard", "shotgun", etc.)
-            groups (list): List of pygame.sprite.Group to add this sprite to
+        Parâmetros:
+            game: Referência para o objeto principal do jogo
+            x (int): Posição X em coordenadas do mundo
+            y (int): Posição Y em coordenadas do mundo
+            ammo_amount (int): Quantidade de munição para fornecer quando coletado
+            ammo_type (str): Tipo de munição ("standard", "shotgun", etc.)
+            groups (list): Lista de pygame.sprite.Group para adicionar este sprite
         """
         super().__init__(game, x, y, item_type='ammo', groups=groups)
         
-        # Ammo properties
+        # Propriedades da munição
         self.ammo_amount = ammo_amount
         self.ammo_type = ammo_type
         
-        # Visual properties
+        # Propriedades visuais
         self.color = (180, 180, 60)  # Yellow for ammo
         self.size = 12
         self.shadow_offset = 3
@@ -35,7 +32,7 @@ class Ammo(Item):
         # Set up animation properties
         self.rotate_speed = random.uniform(0.5, 1.5)
         self.rotation = random.uniform(0, 360)
-        
+
         # Determine appearance based on ammo type
         if ammo_type == "shotgun":
             self.color = (200, 70, 20)  # Orange-red for shotgun shells
@@ -50,12 +47,12 @@ class Ammo(Item):
             self.shape = "box"  # Default is box for standard ammo
     
     def _create_collection_particles(self):
-        """Create particles when ammo is collected."""
+        """Cria partículas quando a munição é coletada."""
         if not hasattr(self.game, 'particles'):
             return
             
         particle_count = min(30, max(15, int(self.ammo_amount * 0.5)))
-        
+
         # Create particle system based on ammo type
         colors = []
         if self.ammo_type == "shotgun":
@@ -82,7 +79,7 @@ class Ammo(Item):
         )
         
         self.game.particles.add(ammo_particles)
-        
+
     def collect(self):
         """Collect the ammo and give it to the player."""
         if self.collected:
@@ -95,7 +92,7 @@ class Ammo(Item):
         player = self.game.player
         ammo_added = False
         
-        # Try different methods based on player implementation
+        # Tenta diferentes métodos com base na implementação do jogador
         if hasattr(player, 'add_ammo'):
             ammo_added = player.add_ammo(self.ammo_type, self.ammo_amount)
         elif hasattr(player, 'ammo') and isinstance(player.ammo, dict):
@@ -103,25 +100,25 @@ class Ammo(Item):
             if self.ammo_type not in player.ammo:
                 player.ammo[self.ammo_type] = 0
             
-            # Check for max ammo (if applicable)
+            # Verifica a munição máxima (se aplicável)
             max_ammo = float('inf')
             if hasattr(player, 'max_ammo') and isinstance(player.max_ammo, dict):
                 if self.ammo_type in player.max_ammo:
                     max_ammo = player.max_ammo[self.ammo_type]
             
-            # Add ammo up to max
+            # Adiciona munição até o máximo
             old_ammo = player.ammo[self.ammo_type]
             player.ammo[self.ammo_type] = min(old_ammo + self.ammo_amount, max_ammo)
             ammo_added = player.ammo[self.ammo_type] > old_ammo
-        
-        # Only proceed if ammo was actually added
+
+        # Só prossegue se a munição foi realmente adicionada
         if not ammo_added:
             return False
         
-        # Create particles
+        # Cria partículas
         self._create_collection_particles()
         
-        # Play pickup sound
+        # Toca o som de coleta
         if hasattr(self.game, 'sounds') and 'ammo_pickup' in self.game.sounds:
             self.game.sounds['ammo_pickup'].play()
         
@@ -131,24 +128,22 @@ class Ammo(Item):
             
         return super().collect()
         
-    def render(self, screen, camera):
-        """
-        Render the ammo with appropriate shape based on ammo_type.
+    def render(self, tela, camera):
+        """Renderiza a munição com a forma apropriada com base no ammo_type.
         
-        Args:
-            screen (pygame.Surface): Screen to render to
-            camera (Camera): Camera for calculating screen position
+        Parâmetros:
+            tela (pygame.Surface): Tela para renderizar
+            camera (Camera): Câmera para calcular a posição na tela
         """
         if self.collected:
             return
             
-        # Calculate position with bobbing and rotation
+        # Calcula a posição com oscilação e rotação
         pos = camera.apply_point((self.x, self.y - self.bob_offset - self.bounce_height))
-        
-        # Update rotation
+        # Atualiza a rotação
         self.rotation += self.rotate_speed
         
-        # Draw shadow
+        # Desenha a sombra
         shadow_pos = (pos[0] + self.shadow_offset, pos[1] + self.shadow_offset)
         
         # Draw based on shape type
@@ -156,30 +151,30 @@ class Ammo(Item):
             # Draw shadow
             pygame.draw.rect(
                 screen,
-                (20, 20, 20, 100),
+                (20, 20, 20, 100), # Cor de sombra mais escura
                 pygame.Rect(shadow_pos[0] - self.size//2, shadow_pos[1] - self.size//2, self.size, self.size),
                 border_radius=2
             )
             
-            # Draw box
+            # Desenha a caixa
             pygame.draw.rect(
-                screen,
-                self.color,
+                tela,
+                self.color, # Cor da caixa
                 pygame.Rect(pos[0] - self.size//2, pos[1] - self.size//2, self.size, self.size),
                 border_radius=2
             )
             
-            # Draw detail lines to indicate ammo box
+            # Desenha linhas de detalhe para indicar a caixa de munição
             line_offset = self.size // 3
             pygame.draw.line(
-                screen,
-                (50, 50, 50),
+                tela,
+                (50, 50, 50), # Cor das linhas de detalhe
                 (pos[0] - line_offset, pos[1] - line_offset),
                 (pos[0] + line_offset, pos[1] - line_offset),
                 1
             )
             pygame.draw.line(
-                screen,
+                tela,
                 (50, 50, 50),
                 (pos[0] - line_offset, pos[1]),
                 (pos[0] + line_offset, pos[1]),
@@ -194,33 +189,33 @@ class Ammo(Item):
             )
             
         elif self.shape == "shell":
-            # Draw a shotgun shell
+            # Desenha uma munição de espingarda
             shell_width = self.size // 2
             shell_height = self.size
             
-            # Draw shadow
+            # Desenha a sombra
             pygame.draw.rect(
                 screen,
-                (20, 20, 20, 100),
+                (20, 20, 20, 100), # Cor de sombra mais escura
                 pygame.Rect(
                     shadow_pos[0] - shell_width//2,
                     shadow_pos[1] - shell_height//2,
                     shell_width,
                     shell_height
                 ),
-                border_radius=1
+                border_radius=1 # Borda redonda
             )
             
-            # Draw shell body
+            # Desenha o corpo da munição
             pygame.draw.rect(
-                screen,
+                tela,
                 self.color,
                 pygame.Rect(
                     pos[0] - shell_width//2,
                     pos[1] - shell_height//2,
                     shell_width,
                     shell_height
-                ),
+                ), 
                 border_radius=1
             )
             
@@ -238,10 +233,10 @@ class Ammo(Item):
             )
             
         elif self.shape == "cell":
-            # Draw an energy cell as a hexagon
+            # Desenha uma célula de energia como um hexágono
             radius = self.size // 2
             points = []
-            for i in range(6):
+            for i in range(6): # Hexagono tem 6 lados
                 angle = math.radians(self.rotation + i * 60)
                 points.append((
                     pos[0] + int(radius * math.cos(angle)),
@@ -249,24 +244,24 @@ class Ammo(Item):
                 ))
                 
             # Draw shadow
-            shadow_points = [(p[0] + self.shadow_offset, p[1] + self.shadow_offset) for p in points]
+            shadow_points = [(p[0] + self.shadow_offset, p[1] + self.shadow_offset) for p in points] # Pontos sombreados
             pygame.draw.polygon(screen, (20, 20, 20, 100), shadow_points)
             
-            # Draw cell
-            pygame.draw.polygon(screen, self.color, points)
+            # Desenha a célula
+            pygame.draw.polygon(tela, self.color, points)
             
-            # Draw center dot
-            pygame.draw.circle(screen, (255, 255, 255), pos, radius // 3)
+            # Desenha o ponto central
+            pygame.draw.circle(tela, (255, 255, 255), pos, radius // 3)
             
         elif self.shape == "grenade":
-            # Draw grenade (circle with a top)
+            # Desenha a granada (círculo com uma parte superior)
             radius = self.size // 2
             
-            # Draw shadow
+            # Desenha a sombra
             pygame.draw.circle(screen, (20, 20, 20, 100), shadow_pos, radius)
             
-            # Draw grenade body
-            pygame.draw.circle(screen, self.color, pos, radius)
+            # Desenha o corpo da granada
+            pygame.draw.circle(tela, self.color, pos, radius)
             
             # Draw top part
             top_height = radius // 2
@@ -282,11 +277,11 @@ class Ammo(Item):
                 border_radius=1
             )
             
-            # Draw highlight
-            pygame.draw.circle(screen, (255, 255, 255, 150), 
+            # Desenha o destaque
+            pygame.draw.circle(tela, (255, 255, 255, 150), 
                               (pos[0] - radius//3, pos[1] - radius//3), 
                               radius//4)
-        
+
         # Draw outline for all shapes
         if self.shape == "box":
             pygame.draw.rect(
@@ -308,7 +303,7 @@ class Ammo(Item):
                     shell_width,
                     shell_height
                 ),
-                width=1,
+                width=1, # Borda
                 border_radius=1
             )
         elif self.shape == "cell":
@@ -320,6 +315,6 @@ class Ammo(Item):
                     pos[0] + int(radius * math.cos(angle)),
                     pos[1] + int(radius * math.sin(angle))
                 ))
-            pygame.draw.polygon(screen, (50, 50, 50), points, width=1)
+            pygame.draw.polygon(tela, (50, 50, 50), points, width=1)
         elif self.shape == "grenade":
-            pygame.draw.circle(screen, (50, 50, 50), pos, self.size // 2, width=1) 
+            pygame.draw.circle(tela, (50, 50, 50), pos, self.size // 2, width=1)

@@ -1,1 +1,1 @@
-# entities package 
+# pacote entities 

@@ -1,10 +1,10 @@
 import pygame
 import random
-from settings import MAP_WIDTH, MAP_HEIGHT, TILE_SIZE
-from sprites import Raider, WildDog # Assuming these are needed
+from core.settings import MAP_WIDTH, MAP_HEIGHT, TILE_SIZE
+from graphics.sprites import Raider, WildDog # Assumindo que estes são necessários
 
 def _is_obstacle_at(game, tile_x, tile_y):
-    """Checks if any obstacle sprite exists at the given tile coordinates."""
+    """Verifica se existe algum sprite de obstáculo nas coordenadas de tile fornecidas."""
     check_rect = pygame.Rect(tile_x * TILE_SIZE, tile_y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
     for obstacle in game.obstacles:
         if obstacle.rect.colliderect(check_rect):
@@ -12,17 +12,17 @@ def _is_obstacle_at(game, tile_x, tile_y):
     return False
 
 def spawn_initial_enemies(game):
-    """Spawns initial enemies across the map."""
-    print("Spawning enemies...")
+    """Gera inimigos iniciais pelo mapa."""
+    print("Gerando inimigos...")
     world_width_tiles = MAP_WIDTH // TILE_SIZE
     world_height_tiles = MAP_HEIGHT // TILE_SIZE
     player_spawn_tile_x = game.player.rect.centerx // TILE_SIZE
     player_spawn_tile_y = game.player.rect.centery // TILE_SIZE
     min_spawn_dist_from_player = 20
 
-    # Spawn Raiders
+    # Gerar Saqueadores
     num_raiders = 10
-    print(f"  Spawning {num_raiders} Raiders...")
+    print(f"  Gerando {num_raiders} Saqueadores...")
     for i in range(num_raiders):
         attempts = 0
         while attempts < 100:
@@ -35,12 +35,12 @@ def spawn_initial_enemies(game):
                     Raider(game, x * TILE_SIZE, y * TILE_SIZE)
                     break
 
-    # Spawn Wild Dog packs
+    # Gerar matilhas de Cães Selvagens
     num_packs = 5
     dogs_per_pack_min = 2
     dogs_per_pack_max = 4
     pack_radius = 3
-    print(f"  Spawning {num_packs} Wild Dog packs...")
+    print(f"  Gerando {num_packs} matilhas de Cães Selvagens...")
     for i in range(num_packs):
         attempts = 0
         pack_placed = False
@@ -67,4 +67,4 @@ def spawn_initial_enemies(game):
                                 break
                     pack_placed = True
                     break
-    print("Enemy spawning complete.") 
+    print("Geração de inimigos completa.") 

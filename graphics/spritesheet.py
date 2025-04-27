@@ -1,26 +1,26 @@
-# Importação da biblioteca Pygame
+# Importação da biblioteca Pygame.
 import pygame
 
-# Classe para gerenciar spritesheets
+# Classe para gerenciar folhas de sprites (spritesheets).
 class Spritesheet:
-    """Classe para gerenciar spritesheets"""
+    """Classe para gerenciar folhas de sprites (spritesheets)."""
     def __init__(self, filename):
-        # Carrega o arquivo de spritesheet
+        # Carrega o arquivo de folha de sprites.
         try:
             self.sheet = pygame.image.load(filename)
         except pygame.error as e:
-            print(f"Não foi possível carregar o spritesheet: {filename}")
+            print(f"Não foi possível carregar a folha de sprites: {filename}")
             print(e)
             raise SystemExit(e)
     
     def get_image(self, x, y, width, height, scale=1, colorkey=None):
-        """Extrai uma imagem da spritesheet
+        """Extrai uma imagem da folha de sprites.
         
-        Args:
-            x, y: Posição da imagem na spritesheet
-            width, height: Dimensões da imagem
-            scale: Fator de escala (padrão 1)
-            colorkey: Cor para transparência (None para usar canal alpha)
+        Argumentos:
+            x, y: Posição da imagem na folha de sprites.
+            width, height: Dimensões da imagem.
+            scale: Fator de escala (padrão 1).
+            colorkey: Cor para transparência (None para usar canal alpha).
         """
         # Cria uma nova superfície com os tamanhos especificados
         image = pygame.Surface((width, height), pygame.SRCALPHA)
@@ -41,14 +41,14 @@ class Spritesheet:
         return image
     
     def load_strip(self, rect, image_count, colorkey=None):
-        """Carrega uma sequência de imagens horizontalmente
+        """Carrega uma sequência de imagens horizontalmente.
         
-        Args:
-            rect: (x, y, width, height) da primeira imagem
-            image_count: Número de imagens na sequência
-            colorkey: Cor para transparência
+        Argumentos:
+            rect: (x, y, width, height) da primeira imagem.
+            image_count: Número de imagens na sequência.
+            colorkey: Cor para transparência.
         """
-        # Lista para armazenar os frames
+        # Lista para armazenar os quadros (frames).
         frames = []
         x, y, width, height = rect
         
@@ -59,15 +59,15 @@ class Spritesheet:
         return frames
     
     def load_grid(self, rect, cols, rows, colorkey=None):
-        """Carrega uma grade de imagens
+        """Carrega uma grade de imagens.
         
-        Args:
-            rect: (x, y, width, height) da primeira imagem
-            cols: Número de colunas
-            rows: Número de linhas
-            colorkey: Cor para transparência
+        Argumentos:
+            rect: (x, y, width, height) da primeira imagem.
+            cols: Número de colunas.
+            rows: Número de linhas.
+            colorkey: Cor para transparência.
         """
-        # Lista para armazenar os frames
+        # Lista para armazenar os quadros (frames).
         frames = []
         x, y, width, height = rect
         

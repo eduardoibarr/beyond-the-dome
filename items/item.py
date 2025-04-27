@@ -1,34 +1,32 @@
 import pygame
 import math
 from abc import ABC
-from settings import *
+from core.settings import *
 
 class Item(pygame.sprite.Sprite, ABC):
-    """
-    Base class for all collectible items in the game.
-    
-    This is an abstract class that should be inherited by specific item types.
+    """Classe base para todos os itens coletáveis no jogo.
+
+    Esta é uma classe abstrata que deve ser herdada por tipos de itens específicos.
     """
     def __init__(self, game, x, y, item_type='generic', groups=None):
-        """
-        Initialize an item.
-        
+        """Inicializa um item.
+
         Args:
-            game: Reference to the main game object
-            x (int): X position in world coordinates
-            y (int): Y position in world coordinates
-            item_type (str): Type of item for identification
-            groups (list): List of pygame.sprite.Group to add this sprite to
+            game: Referência para o objeto principal do jogo
+            x (int): Posição X em coordenadas do mundo
+            y (int): Posição Y em coordenadas do mundo
+            item_type (str): Tipo de item para identificação
+            groups (list): Lista de pygame.sprite.Group para adicionar este sprite
         """
-        # Call parent constructor with appropriate groups
+        # Chama o construtor pai com os grupos apropriados
         groups = groups or []
         if hasattr(game, 'items_group'):
             groups.append(game.items_group)
         if hasattr(game, 'all_sprites'):
             groups.append(game.all_sprites)
         super().__init__(*groups)
-        
-        # Store reference to game
+
+        # Armazena referência para o jogo
         self.game = game
         
         # Set position
@@ -40,59 +38,56 @@ class Item(pygame.sprite.Sprite, ABC):
         self.rect = pygame.Rect(x - 8, y - 8, 16, 16)
         self.hitbox = self.rect.copy()
         
-        # Item properties
+        # Propriedades do item
         self.item_type = item_type
         self.collected = False
         self.age = 0
         self.bob_offset = 0
         self.bob_direction = 1
         self.bob_height = 4
-        self.bob_speed = 1.5
+        self.bob_speed = 1.5 
         
-        # Whether item has been discovered (for filter modules)
+        # Se o item foi descoberto (para módulos de filtro)
         self.discovered = False
         
-        # For drawing
+        # Para desenho
         self.bounce_height = 0
         self.spawn_animation_time = 0.5
         self.spawn_time = 0
         
-        # Setup any child components
+        # Configura quaisquer componentes filhos
         self.setup()
         
     def setup(self):
-        """
-        Override this in subclasses to set up item-specific components.
-        """
+        """Substitua isso nas subclasses para configurar componentes específicos do item."""
         pass
     
     def update(self, dt):
-        """
-        Update item state.
-        
+        """Atualiza o estado do item.
+
         Args:
-            dt (float): Time delta in seconds
+            dt (float): Delta de tempo em segundos
         """
         if self.collected:
             return
             
-        # Update age
+        # Atualiza a idade
         self.age += dt
         
-        # Bobbing animation
+        # Animação de balanço
         self.bob_offset += self.bob_direction * self.bob_speed * dt
         if abs(self.bob_offset) >= self.bob_height:
             self.bob_direction *= -1
             self.bob_offset = self.bob_height if self.bob_offset > 0 else -self.bob_height
             
-        # Handle spawn animation
+        # Manipula a animação de spawn
         if self.age < self.spawn_animation_time:
             progress = self.age / self.spawn_animation_time
             self.bounce_height = 20 * (1 - progress) ** 2
         else:
             self.bounce_height = 0
             
-        # Check proximity to player if player exists
+        # Verifica a proximidade do jogador se o jogador existir
         if hasattr(self.game, 'player') and not self.collected:
             # Calculate distance to player
             player_center = (
@@ -105,49 +100,47 @@ class Item(pygame.sprite.Sprite, ABC):
             dy = player_center[1] - item_center[1]
             distance = math.sqrt(dx * dx + dy * dy)
             
-            # Auto-collect if player is close enough
+            # Coleta automática se o jogador estiver próximo o suficiente
             if distance < ITEM_COLLECT_RADIUS:
                 self.collect()
     
     def collect(self):
-        """
-        Mark the item as collected and trigger effects.
-        Override in subclasses to add specific effects.
+        """Marca o item como coletado e aciona efeitos.
+        Substitua nas subclasses para adicionar efeitos específicos.
         """
         if self.collected:
             return False
             
         self.collected = True
         
-        # Play generic pickup sound
+        # Toca o som genérico de coleta
         if hasattr(self.game, 'sounds') and 'pickup' in self.game.sounds:
             self.game.sounds['pickup'].play()
             
-        # Add to inventory if it exists
+        # Adiciona ao inventário se existir
         if hasattr(self.game, 'inventory'):
             self.game.inventory.add_item(self.item_type)
             
         return True
         
     def render(self, screen, camera):
-        """
-        Render the item on the screen.
-        
+        """Renderiza o item na tela.
+
         Args:
-            screen (pygame.Surface): Screen to render to
-            camera (Camera): Camera for calculating screen position
+            screen (pygame.Surface): Tela para renderizar
+            camera (Camera): Câmera para calcular a posição na tela
         """
         if self.collected:
             return
             
-        # Calculate position with bobbing
+        # Calcula a posição com o balanço
         item_pos = camera.apply(pygame.Rect(
             self.x - 8,
             self.y - 8 - self.bob_offset - self.bounce_height,
             16, 16
         ))
         
-        # Draw a simple shape representing the item
+        # Desenha uma forma simples representando o item
         pygame.draw.rect(screen, WHITE, item_pos)
         
-        # Item specific rendering should be implemented in subclasses 
+        # A renderização específica do item deve ser implementada nas subclasses

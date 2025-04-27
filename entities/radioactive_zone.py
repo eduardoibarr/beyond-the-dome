@@ -1,31 +1,31 @@
 import pygame
 import random
 import math
-from settings import *
+from core.settings import *
 from entities.tile import Tile
 from utils.drawing import draw_gradient_rect
 
 class RadioactiveZone(Tile):
     """
-    Class for tiles representing radioactive zones.
-    Inherits from Tile. Player takes radiation damage while inside.
-    Adds itself to the game's radioactive zone group.
+    Classe para tiles representando zonas radioativas.
+    Herda de Tile. O jogador sofre dano de radiação enquanto estiver dentro.
+    Adiciona-se ao grupo de zonas radioativas do jogo.
     """
     def __init__(self, game, x, y, groups):
         """
-        Initializes a RadioactiveZone tile.
+        Inicializa um tile de RadioactiveZone.
         Args:
-            game: Reference to the main game object.
-            x (int): Tile column index.
-            y (int): Tile row index.
-            groups (pygame.sprite.Group): Sprite group(s) to add this tile to.
+            game: Referência ao objeto principal do jogo.
+            x (int): Índice da coluna do tile.
+            y (int): Índice da linha do tile.
+            groups (pygame.sprite.Group): Grupo(s) de sprite(s) para adicionar este tile.
         """
         super().__init__(game, x, y, groups, 'radioactive')
-        # Add this sprite to the game's radioactive zone group
+        # Adiciona este sprite ao grupo de zonas radioativas do jogo
         if hasattr(game, 'radioactive_zones') and isinstance(game.radioactive_zones, pygame.sprite.Group):
             game.radioactive_zones.add(self)
         else:
-            print(f"Warning: Game object missing or has invalid 'radioactive_zones' group when creating RadioactiveZone at ({x},{y})")
+            print(f"Aviso: Objeto do jogo faltando ou com grupo 'radioactive_zones' inválido ao criar RadioactiveZone em ({x},{y})")
         
         # Registrar no sistema de partículas
         if hasattr(game, 'particle_systems') and hasattr(game.particle_systems, 'radioactive'):
@@ -38,8 +38,8 @@ class RadioactiveZone(Tile):
     def _create_tile_image(self):
         """
         Sobrescreve o método da classe base para criar uma névoa radioativa.
-        Returns:
-            pygame.Surface: The rendered image for the radioactive zone.
+        Retorna:
+            pygame.Surface: A imagem renderizada para a zona radioativa.
         """
         # Criar superfície com transparência
         surf = pygame.Surface((TILE_SIZE, TILE_SIZE), pygame.SRCALPHA)
@@ -52,7 +52,7 @@ class RadioactiveZone(Tile):
         rect = surf.get_rect()
         draw_gradient_rect(surf, rect, light_color_with_alpha, base_color_with_alpha)
         
-        # Adicionar símmbolo de radioativo
+        # Adicionar símbolo de radioativo
         symbol_radius = TILE_SIZE // 3
         symbol_center = (TILE_SIZE // 2, TILE_SIZE // 2)
         
@@ -85,9 +85,9 @@ class RadioactiveZone(Tile):
     
     def update(self, dt):
         """
-        Updates the radioactive zone. Apply radiation effect to player if overlapping.
+        Atualiza a zona radioativa. Aplica efeito de radiação ao jogador se houver sobreposição.
         Args:
-            dt (float): Delta time in seconds.
+            dt (float): Delta time em segundos.
         """
         # Opcional: Verificar sobreposição com o jogador para aplicar dano de radiação
         if hasattr(self.game, 'player') and self.rect.colliderect(self.game.player.rect):

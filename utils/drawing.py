@@ -1,25 +1,57 @@
 import pygame
 import random
 import math
-from settings import (
-    TEXTURE_DENSITY_DEFAULT,
+from core.settings import (
+    TILE_SIZE,
     TEXTURE_POINT_SIZE_MIN,
     TEXTURE_POINT_SIZE_MAX,
     TEXTURE_DARK_COLOR_THRESHOLD,
     TEXTURE_LIGHT_COLOR_THRESHOLD,
     TILE_SIZE # Assuming TILE_SIZE is needed here from settings
 )
+from core.settings import (
+    GRASS_COLOR,
+    GRASS_DARK,
+    GRASS_LIGHT,
+    DIRT_COLOR,
+    DIRT_DARK,
+    DIRT_LIGHT,
+    WATER_COLOR,
+    WATER_DARK,
+    WATER_HIGHLIGHT,
+    CONCRETE_COLOR,
+    CONCRETE_DARK,
+    CONCRETE_LIGHT,
+    BUILDING_COLOR,
+    BUILDING_DARK,
+    BUILDING_LIGHT,
+    METAL_COLOR,
+    METAL_DARK,
+    METAL_LIGHT,
+    METAL_RUST,
+    TREE_TRUNK,
+    TREE_TRUNK_DARK,
+    TREE_TRUNK_LIGHT,
+    TREE_LEAVES_DARK,
+    TREE_LEAVES_LIGHT,
+    RADIOACTIVE_BASE,
+    RADIOACTIVE_BASE_LIGHT,
+    RADIOACTIVE_GLOW,
+    RADIOACTIVE_SYMBOL,
+    OIL_STAIN_COLOR,
+    TEXTURE_DENSITY_DEFAULT,
+)
 
 def simple_noise(x, y, seed, scale=1.0):
-    """
-    Simple pseudo-random noise function.
-    NOTE: For much better terrain, consider using a dedicated noise library
-          like 'perlin-noise' or 'opensimplex'. This is very basic.
+    """Função de ruído pseudo-aleatório simples.
+    NOTA: Para um terreno muito melhor, considere usar uma biblioteca de ruído dedicada
+          como 'perlin-noise' ou 'opensimplex'. Isso é muito básico.
+    
     Args:
-        x (float): X coordinate.
-        y (float): Y coordinate.
-        seed (float): Seed value for randomness.
-        scale (float): Controls the frequency/detail of the noise. Larger scale = larger features.
+        x (float): Coordenada X.
+        y (float): Coordenada Y.
+        seed (float): Valor de semente para aleatoriedade.
+        scale (float): Controla a frequência/detalhe do ruído. Escala maior = características maiores.
     Returns:
         float: Noise value between roughly -1.0 and 1.0.
     """
@@ -32,7 +64,7 @@ def simple_noise(x, y, seed, scale=1.0):
     return max(-1.0, min(1.0, val * 1.5)) # Adjust multiplier if needed
 
 def draw_gradient_rect(surface, rect, color1, color2, vertical=True):
-    """Draws a rectangle with a vertical or horizontal gradient."""
+    """Desenha um retângulo com um gradiente vertical ou horizontal."""
     x, y, w, h = rect
     if vertical:
         for i in range(h):
@@ -54,7 +86,7 @@ def draw_gradient_rect(surface, rect, color1, color2, vertical=True):
             pygame.draw.line(surface, color, (x + i, y), (x + i, y + h - 1))
 
 def draw_textured_rect(surface, rect, base_color, dark_color, light_color, density=TEXTURE_DENSITY_DEFAULT, point_size=(TEXTURE_POINT_SIZE_MIN, TEXTURE_POINT_SIZE_MAX), tile_size=TILE_SIZE):
-    """Draws a rectangle with random texture points."""
+    """Desenha um retângulo com pontos de textura aleatórios."""
     x, y, w, h = rect
     num_points = int((w * h / (tile_size*tile_size)) * density) # Scale density with area
     for _ in range(num_points):
@@ -68,7 +100,7 @@ def draw_textured_rect(surface, rect, base_color, dark_color, light_color, densi
         pygame.draw.circle(surface, pcolor, (px, py), psize)
 
 def draw_crack(surface, start_pos, max_len, color, width=1):
-    """Draws a simple randomized crack line."""
+    """Desenha uma linha de rachadura aleatória simples."""
     x, y = start_pos
     last_x, last_y = x, y
     length = 0
@@ -93,9 +125,9 @@ def draw_crack(surface, start_pos, max_len, color, width=1):
         last_x, last_y = next_x, next_y
         length += step
 
-        # Stop if it hits the edge
+        # Para se atingir a borda
         if not surf_rect.collidepoint(last_x, last_y):
              break
-        # Random chance to stop early
+        # Chance aleatória de parar cedo
         if random.random() < 0.05:
             break 

@@ -1,28 +1,26 @@
 import pygame
 import math
-from settings import *
+from core.settings import *
 from items.item import Item
 from particles import ParticleSystem
 
 class HealthPack(Item):
-    """
-    Health pack item that restores player health when collected.
-    Displays as a red cross with a pulsing glow effect.
+    """Pacote de saúde que restaura a vida do jogador quando coletado.
+    É exibido como uma cruz vermelha com um efeito de brilho pulsante.
     """
     def __init__(self, game, x, y, health_amount=25, groups=None):
-        """
-        Initialize a health pack.
+        """Inicializa um pacote de saúde.
         
-        Args:
-            game: Reference to the main game object
-            x (int): X position in world coordinates
-            y (int): Y position in world coordinates
-            health_amount (int): Amount of health to restore when collected
-            groups (list): List of pygame.sprite.Group to add this sprite to
+        Argumentos:
+            game: Referência para o objeto principal do jogo
+            x (int): Posição X em coordenadas do mundo
+            y (int): Posição Y em coordenadas do mundo
+            health_amount (int): Quantidade de vida para restaurar quando coletado
+            groups (list): Lista de pygame.sprite.Group para adicionar este sprite
         """
         super().__init__(game, x, y, item_type='health', groups=groups)
         
-        # Health pack properties
+        # Propriedades do pacote de saúde
         self.health_amount = health_amount
         
         # Visual properties
@@ -32,15 +30,15 @@ class HealthPack(Item):
         self.glow_size = 28  # Size of glow effect
         self.pulse_rate = 2.0  # Pulse rate in Hz
         
-        # Calculate cross dimensions based on size
+        # Calcula as dimensões da cruz com base no tamanho
         self.cross_width = int(self.size * 0.8)
         self.cross_height = int(self.size * 0.8)
         self.cross_thickness = max(3, int(self.size * 0.2))
     
     def _create_healing_particles(self):
+        """Cria partículas de cura com base na quantidade de vida restaurada.
         """
-        Create healing particles based on amount of health restored.
-        """
+
         if not hasattr(self.game, 'particles'):
             return
             
@@ -48,7 +46,7 @@ class HealthPack(Item):
         particle_count = min(50, max(20, int(self.health_amount * 0.8)))
         
         # Create particle system for healing effect
-        healing_particles = ParticleSystem(
+        particulas_de_cura = ParticleSystem(
             position=(self.x, self.y),
             particle_count=particle_count,
             min_speed=10,
@@ -62,14 +60,14 @@ class HealthPack(Item):
             fade_out=True
         )
         
-        self.game.particles.add(healing_particles)
+        self.game.particles.add(particulas_de_cura)
         
     def collect(self):
+        """Coleta o pacote de saúde e restaura a vida do jogador.
         """
-        Collect the health pack and restore player health.
-        """
+
         if self.collected:
-            return False
+            return False #Já foi coletado
             
         if not hasattr(self.game, 'player'):
             return super().collect()
@@ -91,24 +89,23 @@ class HealthPack(Item):
         elif hasattr(player, 'health'):
             player.health = min(player.health + health_to_restore, max_health)
         
-        # Create healing particles effect
+        # Cria o efeito de partículas de cura
         self._create_healing_particles()
         
-        # Play healing sound
+        # Toca o som de cura
         if hasattr(self.game, 'sounds') and 'heal' in self.game.sounds:
             self.game.sounds['heal'].play()
         
-        # Update HUD with healing amount
+        # Atualiza o HUD com a quantidade de cura
         if hasattr(self.game, 'hud'):
             self.game.hud.show_healing(health_to_restore)
             
         return super().collect()
         
     def render(self, screen, camera):
-        """
-        Render the health pack with glowing effect.
+        """Renderiza o pacote de saúde com efeito de brilho.
         
-        Args:
+        Argumentos:
             screen (pygame.Surface): Screen to render to
             camera (Camera): Camera for calculating screen position
         """
@@ -116,15 +113,15 @@ class HealthPack(Item):
             return
             
         # Calculate position with bobbing
-        pos = camera.apply_point((self.x, self.y - self.bob_offset - self.bounce_height))
+        pos = camera.apply_point((self.x, self.y - self.bob_offset - self.bounce_height)) # calcula a posição com o balanço
         
-        # Calculate pulse scale based on time
+        # Calcula a escala do pulso com base no tempo
         pulse = 0.2 * math.sin(self.age * self.pulse_rate * math.pi * 2) + 1.0
         
         # Draw glow effect (if supported)
         try:
-            # Create a surface for the glow with per-pixel alpha
-            glow_size = int(self.glow_size * pulse)
+            # Cria uma superfície para o brilho com alpha por pixel
+            glow_size = int(self.glow_size * pulse) 
             glow_surf = pygame.Surface((glow_size * 2, glow_size * 2), pygame.SRCALPHA)
             
             # Draw radial gradient
@@ -137,12 +134,12 @@ class HealthPack(Item):
                     radius
                 )
                 
-            # Draw glow on screen
+            # Desenha o brilho na tela
             screen.blit(glow_surf, (pos[0] - glow_size, pos[1] - glow_size))
         except:
-            # Fallback if alpha blending not supported
+            # Alternativa se a mistura alfa não for suportada
             pygame.draw.circle(
-                screen,
+                screen, 
                 self.glow_color[:3],
                 pos,
                 int(self.glow_size * pulse * 0.5)
@@ -163,10 +160,10 @@ class HealthPack(Item):
             self.cross_height
         )
         
-        # Draw the cross
+        # Desenha a cruz
         pygame.draw.rect(screen, self.color, cross_horizontal)
         pygame.draw.rect(screen, self.color, cross_vertical)
         
-        # Draw highlight
+        # Desenha o destaque
         pygame.draw.rect(screen, (255, 255, 255), cross_horizontal, width=1)
         pygame.draw.rect(screen, (255, 255, 255), cross_vertical, width=1) 
