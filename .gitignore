@@ -1,0 +1,77 @@
+# Arquivos Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Ambiente virtual
+venv/
+env/
+ENV/
+
+# IDEs e editores
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Arquivos do sistema
+.DS_Store
+Thumbs.db
+
+# Arquivos de log
+*.log
+
+# Arquivos de dados do jogo
+*.save
+*.sav
+*.dat
+
+# Arquivos temporários
+*.tmp
+*.temp
+
+# Arquivos de build
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Arquivos de configuração local
+config.ini
+settings.json
+
+# Arquivos de cache
+.cache/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Arquivos de documentação
+docs/_build/
+site/
+
+# Arquivos de assets temporários
+assets/temp/
+assets/cache/
+
+# Arquivos de debug
+debug.log
+error.log
