@@ -18,7 +18,7 @@ from core.settings import (
     RADIATION_BAR_BACKGROUND_COLOR,
     RADIATION_BAR_BORDER_COLOR
 )
-from core.settings import PLAYER_HEALTH, RADIATION_MAX, PISTOL_MAGAZINE_SIZE, GREEN, RED, YELLOW, WHITE
+from core.settings import PLAYER_HEALTH, RADIATION_MAX, PISTOL_MAGAZINE_SIZE, GREEN, RED, YELLOW, WHITE, CYAN, LIGHTGREY
 import math
 
 
@@ -184,23 +184,6 @@ def draw_hud(game):
         radiation_text_surface = font.render(radiation_text, True, HUD_COLOR)
         screen.blit(radiation_text_surface, (rad_text_x, rad_text_y))
 
-    # --- Indicador do Módulo de Filtro ---
-    if hasattr(player, 'has_filter_module'):
-        # Define o texto e cor baseado no estado do filtro
-        if player.has_filter_module:
-            protection_text_str = "Filtro: ATIVO"
-            protection_color = GREEN
-        else:
-            protection_text_str = "Filtro: INATIVO"
-            protection_color = RED
-            
-        # Renderiza o texto do filtro
-        shadow_protection = font.render(protection_text_str, True, (0, 0, 0, 150))
-        protection_text = font.render(protection_text_str, True, protection_color)
-        protection_rect = protection_text.get_rect(topleft=(rad_bar_x, rad_bar_y + rad_bar_height + 5))
-        screen.blit(shadow_protection, (protection_rect.x + shadow_offset, protection_rect.y + shadow_offset))
-        screen.blit(protection_text, protection_rect)
-
     # --- Contador de Munição ---
     if hasattr(player, 'pistol') and hasattr(player.pistol, 'ammo_in_mag') and hasattr(player, 'reserve_ammo'):
         # Define o texto e cor baseado no estado da munição
@@ -230,3 +213,61 @@ def draw_hud(game):
         ammo_shadow = font.render(ammo_text, True, (0, 0, 0, 150))
         screen.blit(ammo_shadow, (ammo_rect.x + shadow_offset, ammo_rect.y + shadow_offset))
         screen.blit(ammo_surface, ammo_rect)
+        
+    # --- Indicador de Máscara Reforçada ---
+    if hasattr(player, 'mask_buff_active') and hasattr(player, 'mask_buff_timer'):
+        # Posicionamento
+        mask_indicator_x = rad_bar_x
+        mask_indicator_y = (rad_bar_y + rad_bar_height + 40)
+        
+        # Define a cor e texto com base no status do buff
+        if player.mask_buff_active:
+            # Calcula o tempo restante arredondado para cima
+            remaining_time = math.ceil(player.mask_buff_timer)
+            mask_text_str = f"Máscara Reforçada: {remaining_time}s"
+            mask_color = CYAN
+            
+            # Efeito de pulso para destacar
+            pulse_factor = (math.sin(pygame.time.get_ticks() * 0.01) * 0.2) + 0.8
+            alpha = int(255 * pulse_factor)
+        else:
+            mask_text_str = "Máscara Reforçada: INATIVA"
+            mask_color = LIGHTGREY
+            alpha = 200
+        
+        # Renderiza o texto da máscara com sombra
+        shadow_mask = font.render(mask_text_str, True, (0, 0, 0, 150))
+        mask_text = font.render(mask_text_str, True, mask_color)
+        mask_text.set_alpha(alpha)
+        
+        # Cria retângulo de fundo
+        mask_rect = mask_text.get_rect(topleft=(mask_indicator_x, mask_indicator_y))
+        padding = 6
+        mask_bg_rect = pygame.Rect(mask_rect.left - padding, mask_rect.top - padding,
+                                  mask_rect.width + padding * 2, mask_rect.height + padding * 2)
+        mask_bg_surface = pygame.Surface(mask_bg_rect.size, pygame.SRCALPHA)
+        
+        # Aplica cor de fundo diferente quando ativo
+        bg_color = (0, 50, 80, 100) if player.mask_buff_active else (0, 0, 0, 100)
+        pygame.draw.rect(mask_bg_surface, bg_color, mask_bg_surface.get_rect(), border_radius=5)
+        
+        # Renderiza
+        screen.blit(mask_bg_surface, mask_bg_rect.topleft)
+        screen.blit(shadow_mask, (mask_rect.x + shadow_offset, mask_rect.y + shadow_offset))
+        screen.blit(mask_text, mask_rect)
+        
+        # Renderiza barra de progresso do tempo restante se estiver ativo
+        if player.mask_buff_active:
+            progress_height = 4
+            progress_width = mask_rect.width
+            progress_rect = pygame.Rect(mask_rect.x, mask_rect.bottom + 2, progress_width, progress_height)
+            
+            # Fundo da barra
+            pygame.draw.rect(screen, (50, 50, 50, 150), progress_rect, border_radius=2)
+            
+            # Preenchimento da barra (baseado no tempo restante)
+            from core.settings import REINFORCED_MASK_DURATION
+            fill_width = int(progress_width * (player.mask_buff_timer / REINFORCED_MASK_DURATION))
+            if fill_width > 0:
+                fill_rect = pygame.Rect(progress_rect.x, progress_rect.y, fill_width, progress_height)
+                pygame.draw.rect(screen, CYAN, fill_rect, border_radius=2)

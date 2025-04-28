@@ -58,6 +58,10 @@ class Player(pygame.sprite.Sprite):
         self.radiation = 0
         self.last_hit_time = 0
         self.invincible = False
+        # --- Mask Buff ---
+        self.mask_buff_active = False
+        self.mask_buff_timer = 0.0
+        # --- End Mask Buff ---
         self.ammo_in_mag = PISTOL_MAGAZINE_SIZE
         self.reserve_ammo = BULLET_INITIAL_AMMO - PISTOL_MAGAZINE_SIZE
         self.pistol = Pistol(game, self)
@@ -392,6 +396,18 @@ class Player(pygame.sprite.Sprite):
         Args:
             dt (float): Delta time em segundos
         """
+        # --- Atualiza Buffs ---
+        if self.mask_buff_active:
+            self.mask_buff_timer -= dt
+            if self.mask_buff_timer <= 0:
+                self.mask_buff_active = False
+                self.mask_buff_timer = 0
+                print("Mask buff expired.")
+                # Opcional: Tocar um som de expiração
+                # if hasattr(self.game, 'asset_manager'):
+                #     self.game.asset_manager.play_sound('mask_buff_expire')
+
+        # --- Atualiza outros estados ---
         self.get_keys()
         self.move(dt)
         self.update_radiation(dt)
@@ -452,34 +468,47 @@ class Player(pygame.sprite.Sprite):
         return can_take
 
     def update_radiation(self, dt):
-        """Atualiza o nível de radiação do jogador e aplica dano se necessário."""
-        rad_change = 0
+        """Atualiza o nível de radiação/toxicidade do jogador."""
+        # Verifica se está em zona radioativa (lógica a ser implementada em outro lugar,
+        # por exemplo, na colisão com tiles ou áreas específicas)
+        # self.is_in_radioactive_zone = self.check_radioactive_zone() # Exemplo
+
+        radiation_gain_rate = PLAYER_RADIATION_GAIN_RATE # Taxa padrão de ganho
+
+        # Reduz ou anula o ganho de radiação se o buff da máscara estiver ativo
+        if self.mask_buff_active:
+            # Exemplo: Anula completamente o ganho enquanto o buff está ativo
+            radiation_gain_rate = 0
+            # Ou reduz pela metade: radiation_gain_rate /= 2
+
         if self.is_in_radioactive_zone:
-            increase_rate = RADIATION_INCREASE_RATE * 3
-            if self.has_filter_module: increase_rate *= 0.1 # Filtro reduz a absorção
-            rad_change = increase_rate * dt
-        elif self.has_filter_module:
-            rad_change = -RADIATION_INCREASE_RATE * 0.5 * dt # Filtro limpa radiação
+            self.radiation += radiation_gain_rate * dt
+            # Garante que a radiação não exceda o máximo (se houver um limite)
+            # self.radiation = min(self.radiation, MAX_RADIATION_LEVEL)
         else:
-            rad_change = -RADIATION_INCREASE_RATE * 0.1 * dt # Decaimento natural lento
+            # Recuperação lenta fora de zonas perigosas (opcional)
+            self.radiation -= PLAYER_RADIATION_RECOVERY_RATE * dt
+            self.radiation = max(0, self.radiation) # Garante que não fique negativo
 
-        self.radiation = max(0, min(RADIATION_MAX, self.radiation + rad_change))
+        # Aplica efeitos da radiação (ex: dano contínuo, efeitos visuais)
+        if self.radiation > RADIATION_DAMAGE_THRESHOLD:
+            # Calcula dano baseado no nível de radiação
+            damage = (self.radiation - RADIATION_DAMAGE_THRESHOLD) * RADIATION_DAMAGE_MULTIPLIER * dt
+            self.take_damage(damage) # Aplica dano (sem invencibilidade contínua?)
 
-        # Aplica dano por radiação
-        if self.radiation > RADIATION_DAMAGE_THRESHOLD and not self.has_filter_module:
-            over_threshold = self.radiation - RADIATION_DAMAGE_THRESHOLD
-            max_over = RADIATION_MAX - RADIATION_DAMAGE_THRESHOLD
-            damage_factor = over_threshold / max_over if max_over > 0 else 1
-            damage_amount = RADIATION_DAMAGE_RATE * (1 + damage_factor) * dt
-
-            self.health -= damage_amount
-            self.health = max(0, self.health)
-            if self.health <= 0 and not self.game.cause_of_death:
-                self.game.cause_of_death = "radiação"
-                self.game.playing = False
-
+        # Atualiza a UI ou efeitos visuais relacionados à radiação
+        # Ex: self.game.hud.update_radiation_bar(self.radiation)
 
     def collect_filter_module(self):
         """Ativa o efeito do módulo de filtro coletado."""
         print("Jogador coletou o módulo de filtro!")
-        self.has_filter_module = True 
+        self.has_filter_module = True
+
+    def apply_mask_buff(self, duration):
+        """Ativa o buff da máscara reforçada."""
+        self.mask_buff_active = True
+        self.mask_buff_timer = duration
+        print(f"Mask buff applied for {duration} seconds.")
+        # Opcional: Tocar um som específico para o buff
+        # if hasattr(self.game, 'asset_manager'):
+        #     self.game.asset_manager.play_sound('mask_buff_activate') 

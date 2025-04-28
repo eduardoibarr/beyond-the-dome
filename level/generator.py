@@ -211,9 +211,9 @@ class LevelGenerator:
         """Adiciona várias zonas industriais complexas ao mapa."""
         num_zones = random.randint(3, 6)
         print(f"  Tentando colocar {num_zones} zonas industriais...")
-        min_dist_between_zones = 40
-        min_dist_from_spawn = 30 # Distância mínima do spawn
-        padding = max(15, self.world_width_tiles // 8) # Garantir que o padding seja razoável
+        min_dist_between_zones = 25  # Reduzido de 40 para 25
+        min_dist_from_spawn = 20     # Reduzido de 30 para 20
+        padding = max(10, self.world_width_tiles // 10)  # Reduzido de 15 para 10
 
         for zone_index in range(num_zones):
             placed = False
@@ -279,8 +279,132 @@ class LevelGenerator:
                         self.layout[y][x] = 'concrete'
 
     def _add_specific_industrial_structures(self, center_x, center_y, zone_size, zone_type):
-        # TODO: Implementar as estruturas específicas para cada tipo de zona industrial
-        pass
+        """Adiciona estruturas específicas para cada tipo de zona industrial."""
+        if zone_type == "factory":
+            # Fábrica: um edifício principal com máquinas ao redor
+            building_width = min(zone_size - 4, random.randint(8, 12))
+            building_height = min(zone_size - 4, random.randint(6, 10))
+            building_x = center_x - building_width // 2
+            building_y = center_y - building_height // 2
+            
+            # Cria o edifício principal
+            for y in range(building_y, building_y + building_height):
+                for x in range(building_x, building_x + building_width):
+                    if 0 <= y < self.world_height_tiles and 0 <= x < self.world_width_tiles:
+                        if x == building_x or x == building_x + building_width - 1 or y == building_y or y == building_y + building_height - 1:
+                            self.layout[y][x] = 'wall'
+                        else:
+                            self.layout[y][x] = 'building'
+            
+            # Adiciona algumas máquinas em volta do edifício
+            for _ in range(random.randint(5, 10)):
+                offset_x = random.randint(-zone_size + 2, zone_size - 2)
+                offset_y = random.randint(-zone_size + 2, zone_size - 2)
+                x = center_x + offset_x
+                y = center_y + offset_y
+                
+                # Verifica se está fora do edifício e dentro do mapa
+                if (x < building_x or x >= building_x + building_width or 
+                    y < building_y or y >= building_y + building_height) and \
+                   0 <= y < self.world_height_tiles and 0 <= x < self.world_width_tiles:
+                    if self.layout[y][x] == 'concrete':  # Coloca apenas em concreto
+                        self.layout[y][x] = 'machine'
+        
+        elif zone_type == "refinery":
+            # Refinaria: tanques e tubulações
+            # Adiciona tanques
+            for _ in range(random.randint(3, 6)):
+                tank_radius = random.randint(2, 3)
+                offset_x = random.randint(-zone_size + tank_radius, zone_size - tank_radius)
+                offset_y = random.randint(-zone_size + tank_radius, zone_size - tank_radius)
+                tank_x = center_x + offset_x
+                tank_y = center_y + offset_y
+                
+                # Cria um tanque circular
+                for y in range(tank_y - tank_radius, tank_y + tank_radius + 1):
+                    for x in range(tank_x - tank_radius, tank_x + tank_radius + 1):
+                        if 0 <= y < self.world_height_tiles and 0 <= x < self.world_width_tiles:
+                            dist = math.sqrt((x - tank_x)**2 + (y - tank_y)**2)
+                            if dist <= tank_radius and self.layout[y][x] == 'concrete':
+                                self.layout[y][x] = 'tank'
+            
+            # Adiciona tubulações conectando os tanques
+            for y in range(center_y - zone_size + 2, center_y + zone_size - 1):
+                for x in range(center_x - zone_size + 2, center_x + zone_size - 1):
+                    if 0 <= y < self.world_height_tiles and 0 <= x < self.world_width_tiles:
+                        if self.layout[y][x] == 'concrete' and random.random() < 0.05:
+                            self.layout[y][x] = 'pipe'
+        
+        elif zone_type == "power_plant":
+            # Usina de energia: torres de resfriamento e edifícios
+            # Adiciona torres de resfriamento
+            for _ in range(random.randint(2, 4)):
+                tower_radius = random.randint(3, 4)
+                offset_x = random.randint(-zone_size + tower_radius, zone_size - tower_radius)
+                offset_y = random.randint(-zone_size + tower_radius, zone_size - tower_radius)
+                tower_x = center_x + offset_x
+                tower_y = center_y + offset_y
+                
+                # Cria uma torre circular
+                for y in range(tower_y - tower_radius, tower_y + tower_radius + 1):
+                    for x in range(tower_x - tower_radius, tower_x + tower_radius + 1):
+                        if 0 <= y < self.world_height_tiles and 0 <= x < self.world_width_tiles:
+                            dist = math.sqrt((x - tower_x)**2 + (y - tower_y)**2)
+                            if dist <= tower_radius and self.layout[y][x] == 'concrete':
+                                self.layout[y][x] = 'cooling_tower'
+            
+            # Adiciona geradores
+            for _ in range(random.randint(4, 8)):
+                gen_size = random.randint(1, 2)
+                offset_x = random.randint(-zone_size + gen_size, zone_size - gen_size)
+                offset_y = random.randint(-zone_size + gen_size, zone_size - gen_size)
+                gen_x = center_x + offset_x
+                gen_y = center_y + offset_y
+                
+                if 0 <= gen_y < self.world_height_tiles and 0 <= gen_x < self.world_width_tiles:
+                    if self.layout[gen_y][gen_x] == 'concrete':
+                        self.layout[gen_y][gen_x] = 'generator'
+        
+        elif zone_type == "warehouse":
+            # Armazém: grandes edifícios retangulares
+            warehouse_width = min(zone_size - 2, random.randint(10, 15))
+            warehouse_height = min(zone_size - 2, random.randint(8, 12))
+            warehouse_x = center_x - warehouse_width // 2
+            warehouse_y = center_y - warehouse_height // 2
+            
+            # Cria o armazém
+            for y in range(warehouse_y, warehouse_y + warehouse_height):
+                for x in range(warehouse_x, warehouse_x + warehouse_width):
+                    if 0 <= y < self.world_height_tiles and 0 <= x < self.world_width_tiles:
+                        if x == warehouse_x or x == warehouse_x + warehouse_width - 1 or y == warehouse_y or y == warehouse_y + warehouse_height - 1:
+                            self.layout[y][x] = 'wall'
+                        else:
+                            self.layout[y][x] = 'building'
+        
+        elif zone_type == "mine":
+            # Mina: escavações e máquinas
+            # Cria um poço central
+            pit_radius = min(zone_size - 2, random.randint(5, 8))
+            for y in range(center_y - pit_radius, center_y + pit_radius + 1):
+                for x in range(center_x - pit_radius, center_x + pit_radius + 1):
+                    if 0 <= y < self.world_height_tiles and 0 <= x < self.world_width_tiles:
+                        dist = math.sqrt((x - center_x)**2 + (y - center_y)**2)
+                        if dist <= pit_radius:
+                            self.layout[y][x] = 'dirt'  # Fundo do poço é terra
+            
+            # Adiciona algumas máquinas e estruturas ao redor
+            for _ in range(random.randint(6, 12)):
+                offset_x = random.randint(-zone_size + 2, zone_size - 2)
+                offset_y = random.randint(-zone_size + 2, zone_size - 2)
+                x = center_x + offset_x
+                y = center_y + offset_y
+                
+                # Verifica se está fora do poço e dentro do mapa
+                dist_to_center = math.sqrt(offset_x**2 + offset_y**2)
+                if dist_to_center > pit_radius and dist_to_center < zone_size and \
+                   0 <= y < self.world_height_tiles and 0 <= x < self.world_width_tiles:
+                    if self.layout[y][x] == 'concrete':
+                        self.layout[y][x] = random.choice(['machine', 'generator', 'conveyor'])
 
     def _check_area_clear(self, start_x, start_y, width, height, allowed_tiles):
         """Verifica se uma área retangular contém apenas tipos de tile permitidos."""
@@ -428,6 +552,8 @@ class LevelGenerator:
 
         # Adiciona os módulos de filtro após a criação do nível base
         self._add_filter_modules(num_modules=FILTER_MODULE_COUNT)
+        # Adiciona as máscaras reforçadas
+        self._add_reinforced_masks(num_masks=REINFORCED_MASK_COUNT) # Usa constante de settings.py
 
         print(f"Nível criado. Ponto de spawn: {self.spawn_point}")
         return self.spawn_point
@@ -499,3 +625,78 @@ class LevelGenerator:
                 print(f"    Não foi possível encontrar localização para um módulo após {attempts_per_module} tentativas.")
 
         print(f"  {modules_placed}/{num_modules} módulos de filtro colocados.") 
+
+    def _add_reinforced_masks(self, num_masks=2):
+        """Adiciona itens coletáveis ReinforcedMask ao mapa."""
+        # Garante que os grupos de sprites existem
+        if not hasattr(self.game, 'items'): self.game.items = pygame.sprite.Group()
+        if not hasattr(self.game, 'all_sprites'): self.game.all_sprites = pygame.sprite.Group()
+
+        # Importa tarde para evitar dependência circular
+        try:
+            from items.reinforced_mask import ReinforcedMask
+        except ImportError as e:
+            print(f"Erro ao importar ReinforcedMask: {e}. Máscaras não serão adicionadas.")
+            return
+
+        # Reutiliza a lógica de posicionamento de _add_filter_modules
+        # TODO: Considerar refatorar a lógica de posicionamento para uma função auxiliar comum
+        placed_locations = [] # Pode ser necessário obter locais de módulos de filtro se a distância for entre *todos* os itens
+        walkable_tiles = ['grass', 'dirt', 'concrete'] # Define em quais tiles os itens podem spawnar
+        min_dist_from_spawn = 20 # Distância mínima do ponto de spawn inicial do jogador
+        min_dist_between_items = 12 # Distância mínima entre máscaras (e talvez outros itens)
+        padding = 5 # Para evitar colocar itens muito perto das bordas do mapa
+
+        print(f"  Tentando colocar {num_masks} máscaras reforçadas...")
+        attempts_per_item = 100
+        masks_placed = 0
+
+        for _ in range(num_masks):
+            placed = False
+            for attempt in range(attempts_per_item):
+                # Escolhe uma localização potencial aleatória
+                x = random.randint(padding, self.world_width_tiles - 1 - padding)
+                y = random.randint(padding, self.world_height_tiles - 1 - padding)
+
+                # Verifica se o tile é andável
+                if self.layout[y][x] not in walkable_tiles:
+                    continue
+
+                # Verifica distância do spawn
+                spawn_dist = math.sqrt((x - self.spawn_point[0])**2 + (y - self.spawn_point[1])**2)
+                if spawn_dist < min_dist_from_spawn:
+                    continue
+
+                # Verifica distância de outras máscaras já colocadas
+                too_close = False
+                for px, py in placed_locations:
+                    dist = math.sqrt((x - px)**2 + (y - py)**2)
+                    if dist < min_dist_between_items:
+                        too_close = True
+                        break
+                if too_close:
+                    continue
+                
+                # TODO: Opcional - Verificar distância de Módulos de Filtro também
+                # filter_module_locations = [...] # Obter locais dos módulos colocados anteriormente
+                # for fpx, fpy in filter_module_locations:
+                #    dist = math.sqrt((x - fpx)**2 + (y - fpy)**2)
+                #    if dist < min_dist_between_items:
+                #        too_close = True; break
+                # if too_close: continue
+
+                # Se todas as verificações passarem, coloca o item
+                pixel_x = x * TILE_SIZE + TILE_SIZE // 2 # Centraliza o item no tile
+                pixel_y = y * TILE_SIZE + TILE_SIZE // 2
+                # ReinforcedMask se adiciona aos grupos via super().__init__
+                ReinforcedMask(self.game, pixel_x, pixel_y)
+                placed_locations.append((x, y))
+                masks_placed += 1
+                placed = True
+                # print(f"    Máscara colocada em ({x}, {y})")
+                break # Vai para a próxima máscara
+            
+            if not placed:
+                print(f"    Não foi possível encontrar localização para uma máscara após {attempts_per_item} tentativas.")
+
+        print(f"  {masks_placed}/{num_masks} máscaras reforçadas colocadas.") 

@@ -157,8 +157,17 @@ class Game:
         # Verifica colisões entre jogador e inimigos
         hits = pygame.sprite.spritecollide(self.player, self.enemies, False)
         for enemy in hits:
-            if hasattr(enemy, 'damage'):
+            # Chama o método de ataque do inimigo
+            if hasattr(enemy, 'attack'):
+                enemy.attack()
+            # Se não tiver o método attack, usa a lógica antiga como fallback
+            elif hasattr(enemy, 'damage') and not self.player.invincible:
                 self.player.take_damage(enemy.damage)
+                # Adiciona um pequeno recuo para evitar dano contínuo em contato
+                push_direction = self.player.position - enemy.position
+                if push_direction.length() > 0:
+                    push_direction = push_direction.normalize() * 5
+                    self.player.position += push_direction
 
         # Verifica zonas radioativas
         self.check_radioactive_zones()

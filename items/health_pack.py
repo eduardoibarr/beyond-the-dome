@@ -1,8 +1,9 @@
 import pygame
 import math
+import random
 from core.settings import *
 from items.item import Item
-from graphics.particles import ParticleSystem
+# from graphics.particles import ParticleSystem # Comentado - Causa ImportError
 
 class HealthPack(Item):
     """Pacote de saúde - Item de cura do jogo.

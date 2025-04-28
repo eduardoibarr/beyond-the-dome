@@ -30,8 +30,8 @@ GREY = (128, 128, 128)
 # CONFIGURAÇÕES DO MAPA E TILES
 # =============================================================================
 # Dimensões do mapa
-MAP_WIDTH = 4800   # Largura total do mapa em pixels
-MAP_HEIGHT = 3600  # Altura total do mapa em pixels
+MAP_WIDTH = 6400   # Largura total do mapa em pixels (aumentado de 4800)
+MAP_HEIGHT = 4800  # Altura total do mapa em pixels (aumentado de 3600)
 
 # Configurações dos tiles
 TILE_SIZE = 32  # Tamanho base dos tiles em pixels
@@ -297,3 +297,20 @@ FILTER_MODULE_COUNT = 3
 # =============================================================================
 PLAYER_SPRITESHEET_PATH = 'assets/images/run.png'
 ENEMY_SPRITESHEET_PATH = 'assets/images/run.png'
+
+# --- Items Settings ---
+ITEM_SIZE = 32 # Exemplo, ajuste se necessário
+ITEM_COLLECT_RADIUS = 50 # Raio para coleta automática
+FILTER_MODULE_COUNT = 3 # Quantos módulos de filtro gerar
+REINFORCED_MASK_COUNT = 2 # Quantas máscaras reforçadas gerar
+REINFORCED_MASK_DURATION = 30.0 # Duração do buff da máscara em segundos
+HEALTH_PACK_HEAL_AMOUNT = 50 # Quantidade de cura do HealthPack
+
+# --- Player Settings ---
+# ... (other player settings like PLAYER_HEALTH, PLAYER_SPEED) ...
+PLAYER_RADIATION_GAIN_RATE = 5.0 # Taxa de ganho de radiação por segundo em zona perigosa
+PLAYER_RADIATION_RECOVERY_RATE = 1.0 # Taxa de recuperação fora de zonas perigosas
+RADIATION_DAMAGE_THRESHOLD = 60.0 # Nível de radiação para começar a tomar dano
+RADIATION_DAMAGE_MULTIPLIER = 0.5 # Multiplicador de dano por radiação por segundo
+# Add any other missing constants here (e.g., CYAN color if not defined)
+CYAN = (0, 255, 255) # Exemplo de definição de cor

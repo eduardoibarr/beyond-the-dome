@@ -341,4 +341,21 @@ class Enemy(pygame.sprite.Sprite):
             self.draw_health_bar(screen, camera)
 
         # Desenha partículas independentemente (elas cuidam do próprio culling)
-        self.blood_system.draw(screen, camera) 
+        self.blood_system.draw(screen, camera)
+
+    def attack(self):
+        """Executa um ataque quando o inimigo colide com o jogador.
+        Só é efetivo se o jogador não estiver invencível.
+        """
+        if not self.game.player.invincible:
+            self.game.player.take_damage(self.damage)
+            # # Empurra o jogador ligeiramente
+            # push_direction = self.game.player.position - self.position
+            # if push_direction.length() > 0:
+            #     push_direction = push_direction.normalize() * 5
+            #     self.game.player.position += push_direction
+                
+            # Ativa animação de ataque
+            self.set_animation(ANIM_ENEMY_SLASH)
+            return True
+        return False 

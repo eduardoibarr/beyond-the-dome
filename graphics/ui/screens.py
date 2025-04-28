@@ -700,63 +700,26 @@ def show_go_screen(game):
                 (WIDTH//2 - death_text.get_width()//2, HEIGHT//2 - death_text.get_height()//2)
             )
         
-        # Renderiza botão de retry
-        if progress > 0.8:
-            retry_progress = min(1.0, (progress - 0.8) / 0.2)
-            
-            retry_rect = pygame.Rect(WIDTH//2 - 150, HEIGHT * 3//4 - 30, 300, 60)
-            retry_surf = pygame.Surface((retry_rect.width, retry_rect.height), pygame.SRCALPHA)
-            
-            button_color = (120, 20, 20, int(200 * retry_progress))
-            
-            pulse = (math.sin(current_time * 0.003) * 0.2) + 0.8
-            glow_size = int(20 * pulse)
-            
-            glow_surf = pygame.Surface((retry_rect.width + glow_size*2, retry_rect.height + glow_size*2), pygame.SRCALPHA)
-            glow_color = (150, 0, 0, int(50 * retry_progress * pulse))
-            pygame.draw.rect(
-                glow_surf, 
-                glow_color, 
-                (0, 0, retry_rect.width + glow_size*2, retry_rect.height + glow_size*2), 
-                border_radius=15
-            )
-            glow_rect = glow_surf.get_rect(center=(retry_rect.x + retry_rect.width//2, retry_rect.y + retry_rect.height//2))
-            
-            pygame.draw.rect(retry_surf, button_color, retry_surf.get_rect(), border_radius=10)
-            pygame.draw.rect(
-                retry_surf, 
-                (200, 50, 50, int(255 * retry_progress)), 
-                retry_surf.get_rect(), 
-                width=2, 
-                border_radius=10
-            )
-            
-            retry_font = pygame.font.Font(None, 32)
-            if hasattr(game, 'font'):
-                retry_font = game.font
+        # Instrução para tentar novamente
+        if progress > 0.9:
+            instr_font = pygame.font.Font(None, 28) # Ajuste o tamanho da fonte se necessário
+            if hasattr(game, 'prompt_font'):
+                instr_font = game.prompt_font
                 
-            retry_text = retry_font.render("Tentar Novamente", True, (255, 255, 255))
+            instr_text_surf = instr_font.render("Pressione qualquer tecla para tentar novamente", True, (220, 220, 220))
+            instr_shadow_surf = instr_font.render("Pressione qualquer tecla para tentar novamente", True, (0, 0, 0))
             
-            text_rect = retry_text.get_rect(center=(retry_rect.width//2, retry_rect.height//2))
+            text_rect = instr_text_surf.get_rect(center=(WIDTH // 2, HEIGHT * 3 // 4 + 20)) # Posiciona abaixo de onde o botão estava
+            shadow_pos = text_rect.move(2, 2)
             
-            game.screen.blit(glow_surf, glow_rect)
-            game.screen.blit(retry_surf, retry_rect)
-            game.screen.blit(retry_text, (retry_rect.x + text_rect.x, retry_rect.y + text_rect.y))
-            
-            # Instrução extra
-            if retry_progress >= 1.0:
-                instr_font = pygame.font.Font(None, 24)
-                if hasattr(game, 'prompt_font'):
-                    instr_font = game.prompt_font
-                    
-                instr_text = instr_font.render("Pressione ENTER para continuar ou ESC para sair", True, (255, 255, 255))
-                
-                instr_shadow = instr_font.render("Pressione ENTER para continuar ou ESC para sair", True, (0, 0, 0))
-                shadow_pos = (WIDTH//2 - instr_text.get_width()//2 + 2, retry_rect.bottom + 22)
-                game.screen.blit(instr_shadow, shadow_pos)
-                
-                instr_pos = (WIDTH//2 - instr_text.get_width()//2, retry_rect.bottom + 20)
-                game.screen.blit(instr_text, instr_pos)
+            # Animação de fade in para a instrução
+            instruction_progress = min(1.0, (progress - 0.9) / 0.1)
+            alpha = int(255 * instruction_progress)
+            instr_text_surf.set_alpha(alpha)
+            instr_shadow_surf.set_alpha(alpha)
+
+            game.screen.blit(instr_shadow_surf, shadow_pos)
+            game.screen.blit(instr_text_surf, text_rect)
         
         pygame.display.flip()
         game.clock.tick(60)
@@ -767,14 +730,12 @@ def show_go_screen(game):
                 game.running = False
                 return
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_RETURN and progress > 0.9:
-                    fully_rendered = True
-                elif event.key == pygame.K_ESCAPE:
+                if event.key == pygame.K_ESCAPE:
                     game.running = False
                     return
         
         # Finaliza animação
-        if elapsed >= animation_time + 1000:
+        if elapsed >= animation_time + 500: # Tempo um pouco menor pois não esperamos o botão aparecer totalmente
             fully_rendered = True
     
     # Para efeitos sonoros
@@ -783,8 +744,8 @@ def show_go_screen(game):
             if sound:
                 game.audio_manager.stop(sound)
     
-    # Aguarda input final
-    wait_for_key(game, pygame.K_RETURN)
+    # Aguarda input final (qualquer tecla)
+    wait_for_key(game)
 
 def wait_for_key(game, specific_key=None):
     """Aguarda pressionamento de tecla específica ou qualquer tecla.

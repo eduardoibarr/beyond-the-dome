@@ -3,7 +3,7 @@ import math
 import random
 from core.settings import *
 from items.item import Item
-from graphics.particles import ParticleSystem
+# from graphics.particles import ParticleSystem # Comentado - Causa ImportError
 
 class Ammo(Item):
     """Classe que implementa o sistema de munição do jogo.

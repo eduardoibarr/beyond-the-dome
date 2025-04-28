@@ -62,7 +62,6 @@ class WildDog(Enemy):
         # Reproduz o efeito sonoro da mordida
         if hasattr(self.game, 'asset_manager'):
             self.game.asset_manager.play_sound('wild_dog_bite')
-
         # --- Verificação de Alcance do Ataque ---
         # Cães têm um alcance de ataque menor que outros inimigos
         attack_range = ENEMY_ATTACK_RADIUS * 0.7
@@ -70,3 +69,4 @@ class WildDog(Enemy):
         # Verifica se o jogador está dentro do alcance de mordida
         if self.position.distance_squared_to(self.game.player.position) < attack_range**2:
             self.game.player.take_damage(self.damage)
+

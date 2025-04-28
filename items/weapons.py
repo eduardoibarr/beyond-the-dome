@@ -4,7 +4,57 @@ from projectiles.projectiles import Bullet, Casing
 
 vec = pygame.math.Vector2
 
-class Pistol:
+class Weapon:
+    """Classe base para todas as armas no jogo.
+    
+    Esta classe define a interface comum e funcionalidades básicas
+    que todas as armas devem implementar.
+    """
+    def __init__(self, game, owner):
+        """Inicializa a arma base.
+        
+        Args:
+            game (Game): Referência ao objeto principal do jogo
+            owner (GameObject): Referência ao dono da arma (jogador ou inimigo)
+        """
+        self.game = game
+        self.owner = owner
+        self.last_use_time = 0
+
+    def can_use(self):
+        """Verifica se a arma pode ser usada.
+        
+        Returns:
+            bool: True se pode ser usada, False caso contrário
+        """
+        return True
+        
+    def use(self, direction):
+        """Usa a arma na direção especificada.
+        
+        Args:
+            direction (vec): Vetor normalizado indicando a direção de uso
+        """
+        pass
+        
+    def update(self, dt):
+        """Atualiza o estado da arma.
+        
+        Args:
+            dt (float): Delta time em segundos
+        """
+        pass
+        
+    def draw(self, screen, camera):
+        """Renderiza os efeitos visuais da arma.
+        
+        Args:
+            screen (pygame.Surface): Tela para renderizar
+            camera (Camera): Câmera para calcular a posição
+        """
+        pass
+
+class Pistol(Weapon):
     """Sistema de arma de fogo do jogador.
     
     Esta classe gerencia:
@@ -26,7 +76,7 @@ class Pistol:
             game (Game): Referência ao objeto principal do jogo
             player (Player): Referência ao sprite do jogador
         """
-        self.game = game
+        super().__init__(game, player)
         self.player = player
         self.last_shot_time = 0        # Timestamp do último tiro
         self.reloading = False         # Estado de recarregamento
