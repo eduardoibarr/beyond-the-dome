@@ -27,17 +27,33 @@ class RadioactiveZone(Tile):
         else:
             print(f"Aviso: Objeto do jogo faltando ou com grupo 'radioactive_zones' inválido ao criar RadioactiveZone em ({x},{y})")
         
-        # Registrar no sistema de partículas
-        if hasattr(game, 'particle_systems') and hasattr(game.particle_systems, 'radioactive'):
-            game.particle_systems.radioactive.register_zone(self)
-            # Criar partículas iniciais nesta zona
-            game.particle_systems.radioactive.add_particles(
-                self.rect.centerx, self.rect.centery, count=8, parent_zone=self
-            )
+        # Registrar nos sistemas de partículas (sistema antigo e novo sistema de névoa)
+        if hasattr(game, 'particle_systems'):
+            # Registrar no sistema antigo de partículas
+            if hasattr(game.particle_systems, 'radioactive'):
+                game.particle_systems.radioactive.register_zone(self)
+                # Criar algumas partículas iniciais nesta zona (menos que antes)
+                game.particle_systems.radioactive.add_particles(
+                    self.rect.centerx, self.rect.centery, count=3, parent_zone=self
+                )
+            
+            # Registrar no NOVO sistema de névoa radioativa
+            if hasattr(game.particle_systems, 'radioactive_fog'):
+                game.particle_systems.radioactive_fog.register_zone(self)
+                # Adicionar névoa inicial nesta zona
+                game.particle_systems.radioactive_fog.add_fog_clouds(
+                    self.rect.centerx, self.rect.centery, 
+                    count=4,               # Número de nuvens iniciais 
+                    radius=TILE_SIZE*0.8,  # Raio da área de distribuição
+                    parent_zone=self
+                )
     
     def _create_tile_image(self):
         """
-        Sobrescreve o método da classe base para criar uma névoa radioativa.
+        Sobrescreve o método da classe base para criar uma imagem para a zona radioativa.
+        Agora possui um visual mais simples já que a névoa será renderizada separadamente 
+        pelo sistema de névoa radioativa.
+        
         Retorna:
             pygame.Surface: A imagem renderizada para a zona radioativa.
         """
@@ -45,8 +61,8 @@ class RadioactiveZone(Tile):
         surf = pygame.Surface((TILE_SIZE, TILE_SIZE), pygame.SRCALPHA)
         
         # Base com gradiente mais transparente
-        base_color_with_alpha = (*RADIOACTIVE_BASE, 70)  # Verde escuro com transparência
-        light_color_with_alpha = (*RADIOACTIVE_BASE_LIGHT, 100)  # Verde mais claro com transparência
+        base_color_with_alpha = (*RADIOACTIVE_BASE, 40)  # Verde escuro com mais transparência
+        light_color_with_alpha = (*RADIOACTIVE_BASE_LIGHT, 70)  # Verde mais claro com transparência
         
         # Retângulo base com gradiente
         rect = surf.get_rect()
@@ -66,20 +82,7 @@ class RadioactiveZone(Tile):
         # Desenhar o círculo central
         pygame.draw.circle(surf, RADIOACTIVE_SYMBOL, symbol_center, symbol_radius // 3)
         
-        # Adicionar névoa/fumaça
-        center = (TILE_SIZE // 2, TILE_SIZE // 2)
-        for i in range(3):
-            radius = TILE_SIZE // 2 - i * 4
-            alpha = 100 - i * 20
-            glow_color = (*RADIOACTIVE_GLOW, alpha)
-            # Desenhar vários círculos com opacidade variável para criar efeito de névoa
-            for _ in range(3):
-                offset_x = random.randint(-4, 4)
-                offset_y = random.randint(-4, 4)
-                size_var = random.randint(-2, 2)
-                pygame.draw.circle(surf, glow_color, 
-                                 (center[0] + offset_x, center[1] + offset_y), 
-                                 radius + size_var)
+        # Removemos a névoa daqui, já que será renderizada pelo sistema de névoa
         
         return surf
     
@@ -96,7 +99,14 @@ class RadioactiveZone(Tile):
             
     def kill(self):
         """Remove a zona radioativa e desregistra do sistema de partículas."""
-        # Desregistrar do sistema de partículas antes de remover
-        if hasattr(self.game, 'particle_systems') and hasattr(self.game.particle_systems, 'radioactive'):
-            self.game.particle_systems.radioactive.unregister_zone(self)
-        super().kill()  # Chamar o método kill da classe base 
+        # Desregistrar dos sistemas de partículas antes de remover
+        if hasattr(self.game, 'particle_systems'):
+            # Desregistrar do sistema antigo
+            if hasattr(self.game.particle_systems, 'radioactive'):
+                self.game.particle_systems.radioactive.unregister_zone(self)
+            
+            # Desregistrar do novo sistema de névoa
+            if hasattr(self.game.particle_systems, 'radioactive_fog'):
+                self.game.particle_systems.radioactive_fog.unregister_zone(self)
+                
+        super().kill()  # Chamar o método kill da classe base

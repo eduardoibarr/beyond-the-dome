@@ -1,100 +1,128 @@
 import pygame
-from core.settings import WIDTH, HEIGHT, TILE_SIZE, CAMERA_LERP_FACTOR
-
-# --- Constantes ---
-# CAMERA_LERP_FACTOR = 0.08  # Quão rápido a câmera segue o jogador (menor = mais suave)
+from core.settings import WIDTH, HEIGHT, CAMERA_LERP_FACTOR
 
 class Camera:
-    """
-    Gerencia a visão da câmera com rolagem. Rastreia uma posição e aplica deslocamentos às entidades.
+    """Sistema de câmera do jogo.
+    
+    Esta classe implementa:
+    - Rolagem suave da câmera seguindo o jogador
+    - Sistema de coordenadas do mundo para a tela
+    - Interpolação linear (lerp) para movimento suave
+    - Limitação de bordas do mapa
+    - Culling de objetos fora da tela
     """
     def __init__(self, map_width, map_height):
-        """
-        Inicializa a câmera com as dimensões do mapa.
+        """Inicializa o sistema de câmera.
         
         Args:
-            map_width (int): Largura total do mapa do jogo em pixels.
-            map_height (int): Altura total do mapa do jogo em pixels.
+            map_width (int): Largura total do mapa em pixels
+            map_height (int): Altura total do mapa em pixels
         """
         self.camera = pygame.Rect(0, 0, map_width, map_height)
         self.map_width = map_width
         self.map_height = map_height
         
-        # Posição flutuante da câmera para movimento suave
+        # Posição com precisão de ponto flutuante para movimento suave
         self.x = 0.0
         self.y = 0.0
 
     def apply(self, entity):
-        """
-        Aplica o deslocamento da câmera a uma entidade ou rect.
+        """Converte a posição de uma entidade do mundo para coordenadas da tela.
+        
+        Este método:
+        1. Aplica o deslocamento da câmera à entidade
+        2. Suporta tanto sprites quanto retângulos
+        3. Usa a posição precisa da câmera
         
         Args:
-            entity: Um objeto pygame.sprite.Sprite ou pygame.Rect.
+            entity: Um objeto pygame.sprite.Sprite ou pygame.Rect
             
         Returns:
-            pygame.Rect: O retângulo da entidade ajustado para o deslocamento da câmera.
+            pygame.Rect: Retângulo com a posição ajustada para a tela
         """
-        # Usa a parte inteira da posição flutuante da câmera para aplicar o deslocamento
         offset_x = int(self.x)
         offset_y = int(self.y)
 
-        # Lida com objetos sprite e objetos rect
         if hasattr(entity, 'rect'):
             return entity.rect.move(offset_x, offset_y)
-        else:  # Assume que já é um Rect
+        else:
             return entity.move(offset_x, offset_y)
 
     def update(self, target):
-        """
-        Atualiza a posição da câmera suavemente para manter o alvo centralizado.
+        """Atualiza a posição da câmera para seguir o alvo.
+        
+        Implementa:
+        1. Centralização suave no alvo
+        2. Interpolação linear para movimento fluido
+        3. Limitação às bordas do mapa
         
         Args:
-            target (pygame.sprite.Sprite): O sprite que a câmera deve seguir (geralmente o jogador).
+            target (pygame.sprite.Sprite): Sprite a ser seguido (geralmente o jogador)
         """
-        # Calcula o canto superior esquerdo desejado da visão da câmera (posição do alvo)
-        # Queremos que o centro do alvo esteja no centro da tela
+        # Calcula a posição desejada (centralizada no alvo)
         target_x = -target.rect.centerx + WIDTH // 2
         target_y = -target.rect.centery + HEIGHT // 2
 
-        # --- Interpolação Suave (Lerp) ---
-        # Move a posição flutuante da câmera em direção à posição do alvo
+        # Interpolação linear para movimento suave
         self.x += (target_x - self.x) * CAMERA_LERP_FACTOR
         self.y += (target_y - self.y) * CAMERA_LERP_FACTOR
 
-        # --- Limitação (Clamping) ---
-        # Limita as coordenadas *flutuantes* da câmera para evitar mostrar áreas fora do mapa
-        self.x = min(0.0, self.x)  # Não rolar além da borda esquerda (x=0)
-        self.y = min(0.0, self.y)  # Não rolar além da borda superior (y=0)
-        self.x = max(-(self.map_width - WIDTH), self.x)  # Não rolar além da borda direita
-        self.y = max(-(self.map_height - HEIGHT), self.y)  # Não rolar além da borda inferior
+        # Limita a câmera às bordas do mapa
+        self.x = min(0.0, self.x)  # Borda esquerda
+        self.y = min(0.0, self.y)  # Borda superior
+        self.x = max(-(self.map_width - WIDTH), self.x)  # Borda direita
+        self.y = max(-(self.map_height - HEIGHT), self.y)  # Borda inferior
 
-        # Atualiza o Rect real da câmera usado para aplicar deslocamentos (usando a parte inteira)
+        # Atualiza o retângulo da câmera
         self.camera.x = int(self.x)
         self.camera.y = int(self.y)
 
     def screen_to_world(self, screen_pos):
-        """
-        Converte coordenadas da tela para coordenadas do mundo.
+        """Converte coordenadas da tela para coordenadas do mundo.
+        
+        Útil para:
+        - Posicionamento do mouse no mundo
+        - Interação com objetos do mundo
+        - Cálculos de colisão
         
         Args:
-            screen_pos (tuple): As coordenadas (x, y) da tela para converter.
+            screen_pos (tuple): Coordenadas (x, y) na tela
             
         Returns:
-            tuple: As coordenadas (x, y) do mundo correspondentes.
+            tuple: Coordenadas (x, y) correspondentes no mundo
         """
-        # Usa a parte inteira da posição flutuante da câmera
         return (screen_pos[0] - int(self.x), screen_pos[1] - int(self.y))
 
     def apply_coords(self, x, y):
-        """
-        Converte coordenadas do mundo para coordenadas da tela.
+        """Converte coordenadas individuais do mundo para a tela.
+        
+        Útil para:
+        - Renderização de efeitos
+        - Posicionamento de UI
+        - Desenho de partículas
         
         Args:
-            x (int): A coordenada x do mundo.
-            y (int): A coordenada y do mundo.
+            x (int): Coordenada x no mundo
+            y (int): Coordenada y no mundo
             
         Returns:
-            tuple: As coordenadas (x, y) da tela correspondentes.
+            tuple: Coordenadas (x, y) correspondentes na tela
         """
-        # Usa a parte inteira da posição flutuante da câmera
-        return (x + int(self.x), y + int(self.y)) 
+        return (x + int(self.x), y + int(self.y))
+
+    def is_rect_visible(self, rect):
+        """Verifica se um retângulo está visível na área da câmera.
+        
+        Usado para:
+        - Culling de objetos fora da tela
+        - Otimização de renderização
+        - Economia de processamento
+        
+        Args:
+            rect (pygame.Rect): Retângulo a ser verificado
+            
+        Returns:
+            bool: True se visível, False caso contrário
+        """
+        visible_area = pygame.Rect(-self.camera.x, -self.camera.y, WIDTH, HEIGHT)
+        return rect.colliderect(visible_area) 

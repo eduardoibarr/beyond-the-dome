@@ -24,9 +24,14 @@ class Tile(pygame.sprite.Sprite):
         self.y = y * TILE_SIZE # Posição no mundo em pixels
         self.tile_x = x # Posição na grade
         self.tile_y = y # Posição na grade
+        
+        # Animation timer for water
+        self.animation_timer = random.uniform(0, 2 * math.pi) # Offset animation start
 
-        # Armazena em cache a imagem gerada - gera apenas uma vez
-        self.image = self._create_tile_image()
+        # Armazena em cache a imagem BASE gerada - gera apenas uma vez
+        self.image_base = self._create_tile_image()
+        # A imagem ativa é inicialmente a imagem base
+        self.image = self.image_base.copy()
         self.rect = self.image.get_rect()
         self.rect.topleft = (self.x, self.y)
 
@@ -134,6 +139,13 @@ class Tile(pygame.sprite.Sprite):
                         if alpha > 0:
                             pygame.draw.circle(surf, (*OIL_STAIN_COLOR[:3], alpha), (stain_x, stain_y), r)
         
+        # --- Tile de Água ---
+        elif self.kind == 'water':
+            # Gradiente base
+            draw_gradient_rect(surf, rect, WATER_HIGHLIGHT, WATER_COLOR)
+            # Textura leve
+            draw_textured_rect(surf, rect, WATER_COLOR, WATER_DARK, WATER_HIGHLIGHT, density=25, point_size=(1, 2))
+
         # --- Tile Padrão/Desconhecido ---
         else:
             surf.fill(RED) # Preenche com vermelho para indicar um tipo desconhecido
@@ -149,3 +161,26 @@ class Tile(pygame.sprite.Sprite):
                 pass
 
         return surf 
+
+    def update(self, dt):
+        """Atualiza o tile, aplicando animação para tipos específicos como água."""
+        if self.kind == 'water':
+            # Ripple animation using sine wave based on time and position
+            self.animation_timer += dt * 1.5 # Speed of animation
+            
+            # Calculate ripple intensity (0 to 1)
+            # Add tile_x and tile_y to offset waves spatially
+            ripple = (math.sin(self.animation_timer + self.tile_x * 0.5 + self.tile_y * 0.3) + 1) / 2 
+            
+            # Create a semi-transparent overlay
+            overlay = pygame.Surface((TILE_SIZE, TILE_SIZE), pygame.SRCALPHA)
+            highlight_alpha = int(60 * ripple) # Max alpha for highlight
+            dark_alpha = int(40 * (1 - ripple)) # Max alpha for dark part
+            
+            # Draw subtle highlights and shadows
+            overlay.fill((*WATER_HIGHLIGHT[:3], highlight_alpha), special_flags=pygame.BLEND_RGBA_ADD)
+            overlay.fill((*WATER_DARK[:3], dark_alpha), special_flags=pygame.BLEND_RGBA_SUB)
+            
+            # Blit the base image and the overlay onto the active image
+            self.image = self.image_base.copy() # Start fresh from base
+            self.image.blit(overlay, (0, 0))

@@ -1,10 +1,24 @@
-# Importação da biblioteca Pygame.
 import pygame
 
-# Classe para gerenciar folhas de sprites (spritesheets).
 class Spritesheet:
-    """Classe para gerenciar folhas de sprites (spritesheets)."""
+    """Sistema de gerenciamento de folhas de sprites.
+    
+    Esta classe implementa:
+    - Carregamento de spritesheets
+    - Extração de sprites individuais
+    - Carregamento de sequências de animação
+    - Suporte a escala e transparência
+    - Otimização de memória através de reutilização
+    """
     def __init__(self, filename):
+        """Inicializa o gerenciador de spritesheet.
+        
+        Args:
+            filename (str): Caminho do arquivo da folha de sprites
+            
+        Raises:
+            SystemExit: Se não for possível carregar o arquivo
+        """
         # Carrega o arquivo de folha de sprites.
         try:
             self.sheet = pygame.image.load(filename)
@@ -14,13 +28,22 @@ class Spritesheet:
             raise SystemExit(e)
     
     def get_image(self, x, y, width, height, scale=1, colorkey=None):
-        """Extrai uma imagem da folha de sprites.
+        """Extrai uma única imagem da folha de sprites.
         
-        Argumentos:
-            x, y: Posição da imagem na folha de sprites.
-            width, height: Dimensões da imagem.
-            scale: Fator de escala (padrão 1).
-            colorkey: Cor para transparência (None para usar canal alpha).
+        Este método:
+        1. Cria uma nova superfície com canal alpha
+        2. Extrai a região especificada da spritesheet
+        3. Aplica escala se necessário
+        4. Configura a transparência
+        
+        Args:
+            x, y (int): Posição do sprite na folha
+            width, height (int): Dimensões do sprite
+            scale (float): Fator de escala (1 = tamanho original)
+            colorkey (tuple): Cor RGB para transparência
+            
+        Returns:
+            pygame.Surface: Imagem extraída e processada
         """
         # Cria uma nova superfície com os tamanhos especificados
         image = pygame.Surface((width, height), pygame.SRCALPHA)
@@ -41,12 +64,20 @@ class Spritesheet:
         return image
     
     def load_strip(self, rect, image_count, colorkey=None):
-        """Carrega uma sequência de imagens horizontalmente.
+        """Carrega uma sequência horizontal de sprites.
         
-        Argumentos:
-            rect: (x, y, width, height) da primeira imagem.
-            image_count: Número de imagens na sequência.
-            colorkey: Cor para transparência.
+        Útil para:
+        - Animações de movimento
+        - Sequências de ações
+        - Sprites com múltiplos estados
+        
+        Args:
+            rect (tuple): (x, y, width, height) do primeiro sprite
+            image_count (int): Número de sprites na sequência
+            colorkey (tuple): Cor RGB para transparência
+            
+        Returns:
+            list: Lista de pygame.Surface com os sprites extraídos
         """
         # Lista para armazenar os quadros (frames).
         frames = []
@@ -59,13 +90,21 @@ class Spritesheet:
         return frames
     
     def load_grid(self, rect, cols, rows, colorkey=None):
-        """Carrega uma grade de imagens.
+        """Carrega uma grade de sprites.
         
-        Argumentos:
-            rect: (x, y, width, height) da primeira imagem.
-            cols: Número de colunas.
-            rows: Número de linhas.
-            colorkey: Cor para transparência.
+        Ideal para:
+        - Conjuntos completos de animações
+        - Tilesets
+        - Múltiplas direções de movimento
+        
+        Args:
+            rect (tuple): (x, y, width, height) do primeiro sprite
+            cols (int): Número de colunas na grade
+            rows (int): Número de linhas na grade
+            colorkey (tuple): Cor RGB para transparência
+            
+        Returns:
+            list: Lista de pygame.Surface com todos os sprites da grade
         """
         # Lista para armazenar os quadros (frames).
         frames = []

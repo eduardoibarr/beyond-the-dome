@@ -7,64 +7,19 @@ from core.settings import (
     TEXTURE_POINT_SIZE_MAX,
     TEXTURE_DARK_COLOR_THRESHOLD,
     TEXTURE_LIGHT_COLOR_THRESHOLD,
-    TILE_SIZE # Assuming TILE_SIZE is needed here from settings
-)
-from core.settings import (
-    GRASS_COLOR,
-    GRASS_DARK,
-    GRASS_LIGHT,
-    DIRT_COLOR,
-    DIRT_DARK,
-    DIRT_LIGHT,
-    WATER_COLOR,
-    WATER_DARK,
-    WATER_HIGHLIGHT,
-    CONCRETE_COLOR,
-    CONCRETE_DARK,
-    CONCRETE_LIGHT,
-    BUILDING_COLOR,
-    BUILDING_DARK,
-    BUILDING_LIGHT,
-    METAL_COLOR,
-    METAL_DARK,
-    METAL_LIGHT,
-    METAL_RUST,
-    TREE_TRUNK,
-    TREE_TRUNK_DARK,
-    TREE_TRUNK_LIGHT,
-    TREE_LEAVES_DARK,
-    TREE_LEAVES_LIGHT,
-    RADIOACTIVE_BASE,
-    RADIOACTIVE_BASE_LIGHT,
-    RADIOACTIVE_GLOW,
-    RADIOACTIVE_SYMBOL,
-    OIL_STAIN_COLOR,
     TEXTURE_DENSITY_DEFAULT,
 )
 
-def simple_noise(x, y, seed, scale=1.0):
-    """Função de ruído pseudo-aleatório simples.
-    NOTA: Para um terreno muito melhor, considere usar uma biblioteca de ruído dedicada
-          como 'perlin-noise' ou 'opensimplex'. Isso é muito básico.
+def draw_gradient_rect(surface, rect, color1, color2, vertical=True):
+    """Desenha um retângulo com um gradiente vertical ou horizontal.
     
     Args:
-        x (float): Coordenada X.
-        y (float): Coordenada Y.
-        seed (float): Valor de semente para aleatoriedade.
-        scale (float): Controla a frequência/detalhe do ruído. Escala maior = características maiores.
-    Returns:
-        float: Noise value between roughly -1.0 and 1.0.
+        surface (pygame.Surface): Superfície onde desenhar
+        rect (tuple): Retângulo (x, y, largura, altura)
+        color1 (tuple): Cor inicial (R, G, B)
+        color2 (tuple): Cor final (R, G, B)
+        vertical (bool): Se True, gradiente vertical; se False, horizontal
     """
-    # Combine sine and cosine functions with different frequencies and seeds
-    # to create a pseudo-random but somewhat smooth pattern.
-    val = (math.sin(x / scale * 0.1 + seed) * math.cos(y / scale * 0.1 + seed * 0.7) * 0.5 +
-           math.sin((x + y) / scale * 0.2 + seed * 1.3) * 0.3 +
-           math.sin(math.sqrt(x * x + y * y) / scale * 0.1 + seed * 2.5) * 0.2)
-    # Normalize roughly to -1 to 1 range (approximation)
-    return max(-1.0, min(1.0, val * 1.5)) # Adjust multiplier if needed
-
-def draw_gradient_rect(surface, rect, color1, color2, vertical=True):
-    """Desenha um retângulo com um gradiente vertical ou horizontal."""
     x, y, w, h = rect
     if vertical:
         for i in range(h):
@@ -86,40 +41,59 @@ def draw_gradient_rect(surface, rect, color1, color2, vertical=True):
             pygame.draw.line(surface, color, (x + i, y), (x + i, y + h - 1))
 
 def draw_textured_rect(surface, rect, base_color, dark_color, light_color, density=TEXTURE_DENSITY_DEFAULT, point_size=(TEXTURE_POINT_SIZE_MIN, TEXTURE_POINT_SIZE_MAX), tile_size=TILE_SIZE):
-    """Desenha um retângulo com pontos de textura aleatórios."""
+    """Desenha um retângulo com pontos de textura aleatórios.
+    
+    Args:
+        surface (pygame.Surface): Superfície onde desenhar
+        rect (tuple): Retângulo (x, y, largura, altura)
+        base_color (tuple): Cor base (R, G, B)
+        dark_color (tuple): Cor escura para sombras (R, G, B)
+        light_color (tuple): Cor clara para destaques (R, G, B)
+        density (float): Densidade dos pontos de textura
+        point_size (tuple): Tamanho mínimo e máximo dos pontos
+        tile_size (int): Tamanho do tile para escalar a densidade
+    """
     x, y, w, h = rect
-    num_points = int((w * h / (tile_size*tile_size)) * density) # Scale density with area
+    num_points = int((w * h / (tile_size*tile_size)) * density) # Escala a densidade com a área
     for _ in range(num_points):
         px = random.randint(x, x + w - 1)
         py = random.randint(y, y + h - 1)
-        psize = random.randint(point_size[0], point_size[1]) # Use tuple elements
+        psize = random.randint(point_size[0], point_size[1]) # Usa os elementos da tupla
         pcolor_choice = random.random()
         if pcolor_choice < TEXTURE_DARK_COLOR_THRESHOLD: pcolor = dark_color
         elif pcolor_choice < TEXTURE_LIGHT_COLOR_THRESHOLD: pcolor = light_color
-        else: pcolor = base_color # Some points match base
+        else: pcolor = base_color # Alguns pontos combinam com a cor base
         pygame.draw.circle(surface, pcolor, (px, py), psize)
 
 def draw_crack(surface, start_pos, max_len, color, width=1):
-    """Desenha uma linha de rachadura aleatória simples."""
+    """Desenha uma linha de rachadura aleatória simples.
+    
+    Args:
+        surface (pygame.Surface): Superfície onde desenhar
+        start_pos (tuple): Posição inicial (x, y)
+        max_len (float): Comprimento máximo da rachadura
+        color (tuple): Cor da rachadura (R, G, B)
+        width (int): Largura da linha
+    """
     x, y = start_pos
     last_x, last_y = x, y
     length = 0
-    angle = random.uniform(0, 2 * math.pi) # Initial angle
+    angle = random.uniform(0, 2 * math.pi) # Ângulo inicial
 
     while length < max_len:
-        # Change angle slightly
+        # Muda o ângulo levemente
         angle += random.uniform(-0.5, 0.5)
-        # Move a small step
+        # Move um pequeno passo
         step = random.uniform(1, 3)
         next_x = last_x + math.cos(angle) * step
         next_y = last_y + math.sin(angle) * step
 
-        # Clamp to surface bounds (important!)
+        # Limita aos limites da superfície (importante!)
         surf_rect = surface.get_rect()
         next_x = max(surf_rect.left, min(surf_rect.right - 1, next_x))
         next_y = max(surf_rect.top, min(surf_rect.bottom - 1, next_y))
 
-        # Draw segment using integers
+        # Desenha o segmento usando inteiros
         pygame.draw.line(surface, color, (int(last_x), int(last_y)), (int(next_x), int(next_y)), width)
 
         last_x, last_y = next_x, next_y

@@ -1,7 +1,5 @@
-import pygame
-import sys
-from core.game import Game # Importa a classe Game refatorada
-from graphics.ui.screens import show_start_screen, show_go_screen, display_intro # Importa as funções de tela
+from core.game import Game 
+from graphics.ui.screens import show_start_screen, show_go_screen, display_intro
 
 # --- Inicialização do Jogo e Loop Principal ---
 if __name__ == '__main__':

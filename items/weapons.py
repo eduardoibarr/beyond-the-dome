@@ -1,146 +1,175 @@
 import pygame
-import math
 from core.settings import *
-from projectiles.projectiles import Bullet
-
-
+from projectiles.projectiles import Bullet, Casing
 
 vec = pygame.math.Vector2
 
-# Classe da Pistola
 class Pistol:
-    """Manages the player's pistol weapon."""
+    """Sistema de arma de fogo do jogador.
+    
+    Esta classe gerencia:
+    - Sistema de disparo e cadência
+    - Recarregamento e gerenciamento de munição
+    - Efeitos visuais de disparo
+    - Integração com o sistema de projéteis
+    
+    Características:
+    - Cadência de tiro configurável
+    - Sistema de pente com munição limitada
+    - Recarregamento automático
+    - Efeito visual de clarão do disparo
+    """
     def __init__(self, game, player):
-        """ Inicializa a pistola.
+        """Inicializa a pistola.
+        
         Args:
-            game (Game): Referência ao objeto principal do jogo.
-            player (Player): Referência ao sprite do jogador.
+            game (Game): Referência ao objeto principal do jogo
+            player (Player): Referência ao sprite do jogador
         """
         self.game = game
         self.player = player
-        self.last_shot_time = 0        # Timestamp do último tiro disparado
-        self.reloading = False
-        self.reload_start_time = 0
-        self.ammo_in_mag = PISTOL_MAGAZINE_SIZE # Começa com um pente cheio
-        self.muzzle_flash_timer = 0 # Para desenhar o clarão do disparo
+        self.last_shot_time = 0        # Timestamp do último tiro
+        self.reloading = False         # Estado de recarregamento
+        self.reload_start_time = 0     # Início do recarregamento
+        self.ammo_in_mag = PISTOL_MAGAZINE_SIZE  # Munição no pente
+        self.muzzle_flash_timer = 0    # Timer para o clarão do disparo
+        self.last_fire_rate = BULLET_FIRE_RATE   # Cadência de tiro
 
     def can_shoot(self):
-        """Checks if the pistol can fire (fire rate, reloading, ammo)."""
+        """Verifica se a pistola pode atirar.
+        
+        Condições necessárias:
+        1. Não estar recarregando
+        2. Ter munição no pente
+        3. Respeitar a cadência de tiro
+        
+        Returns:
+            bool: True se pode atirar, False caso contrário
+        """
         now = pygame.time.get_ticks()
         return (not self.reloading and
                 self.ammo_in_mag > 0 and
                 now - self.last_shot_time > PISTOL_FIRE_RATE)
 
     def start_reload(self):
-        """Inicia a sequência de recarregamento se necessário e possível."""
-        # Checa se já está recarregando ou se o pente está cheio
+        """Inicia o processo de recarregamento.
+        
+        Verifica:
+        1. Se já está recarregando
+        2. Se o pente está cheio
+        3. Se o jogador tem munição na reserva
+        
+        Inicia a animação e o som de recarregamento.
+        """
         if self.reloading or self.ammo_in_mag == PISTOL_MAGAZINE_SIZE:
             return
-        # Checa se o jogador tem munição na reserva (implementar na classe Player)
+            
         if self.player.can_reload():
-            print("Recarregando...") # Debug/Som
             self.reloading = True
             self.reload_start_time = pygame.time.get_ticks()
-            # Toca o som de recarregando
-            # self.game.sound_manager.play('pistol_reload_start')
+            self.game.play_audio('reload_start', volume=0.7)
 
     def finish_reload(self):
-        """Completa a sequência de recarregamento."""
+        """Finaliza o processo de recarregamento.
+        
+        Este método:
+        1. Calcula a munição necessária
+        2. Transfere munição da reserva para o pente
+        3. Atualiza o estado da arma
+        4. Toca o som de recarregamento completo
+        """
         needed_ammo = PISTOL_MAGAZINE_SIZE - self.ammo_in_mag
         transferred_ammo = self.player.take_ammo_from_reserve(needed_ammo)
         self.ammo_in_mag += transferred_ammo
         self.reloading = False
-        print(f"Recarregamento finalizado. Munição: {self.ammo_in_mag}/{self.player.reserve_ammo}") # Debug
-        # Toca o som de recarregamento completo
-        # self.game.sound_manager.play('pistol_reload_end')
+        self.game.play_audio('reload_end', volume=0.7)
 
-    def shoot(self, target_world_pos):
-        """ Dispara uma bala na direção do alvo, se possível.
-
+    def shoot(self, direction):
+        """Dispara um projétil na direção especificada.
+        
+        Este método:
+        1. Verifica se pode atirar
+        2. Cria o projétil
+        3. Atualiza a munição
+        4. Inicia recarregamento se necessário
+        5. Toca efeitos sonoros
+        
         Args:
-            target_world_pos (vec): The target position in world coordinates.
+            direction (vec): Vetor normalizado indicando a direção do tiro
         """
         if not self.can_shoot():
-            # Optionally trigger reload if out of ammo
             if not self.reloading and self.ammo_in_mag <= 0:
-                 self.start_reload()
-            # Toca o som de sem munição?
-            # self.game.sound_manager.play('pistol_empty')
+                self.start_reload()
+            self.game.play_audio('empty_click', volume=0.7)
             return
 
         now = pygame.time.get_ticks()
+        if now - self.last_shot_time < self.last_fire_rate:
+            return
+
         self.last_shot_time = now
         self.ammo_in_mag -= 1
-        self.muzzle_flash_timer = now # Inicia o timer do clarão do disparo
+        self.muzzle_flash_timer = now
 
-        # --- Calcula os parâmetros do tiro ---
-        # Calcula o vetor de direção do centro do jogador até a posição do alvo no mundo
-        start_pos_world = vec(self.player.position) # Usa a posição precisa do jogador no mundo
-        direction = target_world_pos - start_pos_world
-        if direction.length_squared() > 0: # Evita normalizar um vetor zero
-             direction = direction.normalize()
-        else:
-             # Direção padrão (ex: baseado para onde o jogador está olhando) se o alvo for o mesmo que o jogador
-             direction = vec(1, 0) if self.player.facing_right else vec(-1, 0)
+        # Calcula a posição de spawn do projétil
+        offset_dist = self.player.rect.width / 2 + BULLET_WIDTH / 2
+        spawn_pos = self.player.position + direction * offset_dist
 
-        # Calcula a posição de spawn ligeiramente na frente do jogador
-        # Usa o tamanho do rect do jogador para o cálculo do offset
-        offset_dist = self.player.rect.width / 2 + BULLET_WIDTH / 2 # Spawn um pouco fora do raio do jogador
-        spawn_pos = start_pos_world + direction * offset_dist
+        # Cria e dispara o projétil
+        Bullet(self.game, spawn_pos, direction, BULLET_SPEED)
+        self.game.play_audio('beretta-m9', volume=0.6)
 
-        # Aplica algum recuo/espalhamento (opcional)
-        # angle_offset = random.uniform(-PISTOL_SPREAD_ANGLE, PISTOL_SPREAD_ANGLE)
-        # direction = direction.rotate(angle_offset)
+        # Ejetar casquilo
+        casing_spawn_offset = vec(15 if self.player.facing_right else -15, -5) # Deslocamento do casquilo
+        casing_pos = self.player.position + casing_spawn_offset
+        Casing(self.game, casing_pos, self.player.facing_right)
 
-        # --- Cria o projétil da bala ---
-        # print(f"Atirando bala! Dir: {direction}") # Debug
-        Bullet(self.game, spawn_pos, direction, BULLET_SPEED) # Cria o projétil
-        # Toca o som do tiro
-        self.game.play_audio('pistol_fire') # Reproduz o som do tiro
-
-        # Aplica recuo visual ao jogador (opcional, tratado em Player?)
-        # self.player.apply_recoil(direction * -1 * PISTOL_RECOIL_AMOUNT)
-
-        # Checa se precisa recarregar após esse tiro
+        # Inicia recarregamento automático se necessário
         if self.ammo_in_mag <= 0:
-             self.start_reload()
-
+            self.start_reload()
 
     def update(self, dt):
-        """ Atualiza o estado da pistola, principalmente o timer de recarregamento.
+        """Atualiza o estado da pistola.
+        
+        Gerencia:
+        1. Timer de recarregamento
+        2. Estado da arma
+        3. Efeitos visuais
+        
         Args:
-            dt (float): Delta time em segundos.
+            dt (float): Delta time em segundos
         """
         if self.reloading:
             now = pygame.time.get_ticks()
             if now - self.reload_start_time > PISTOL_RELOAD_TIME:
                 self.finish_reload()
 
-        # Mouse button handling is done in Player.get_keys
     def draw(self, screen, camera):
-        """ Desenha os efeitos da arma, como o clarão do disparo.
+        """Renderiza os efeitos visuais da arma.
+        
+        Implementa:
+        1. Clarão do disparo
+        2. Posicionamento correto na tela
+        3. Efeitos de partículas
+        
         Args:
-            screen (pygame.Surface): A superfície principal de exibição.
-            camera (Camera): O objeto câmera do jogo.
+            screen (pygame.Surface): Tela para renderizar
+            camera (Camera): Câmera para calcular a posição
         """
         now = pygame.time.get_ticks()
         if self.muzzle_flash_timer > 0 and now - self.muzzle_flash_timer < PISTOL_MUZZLE_FLASH_DURATION:
-            # Calcula a posição do clarão (na ponta do cano)
-            # Precisa da direção para onde o jogador está mirando
-            direction = vec(1, 0) if self.player.facing_right else vec(-1, 0)
-            offset_dist = self.player.rect.width * 0.6 # Ajustar se necessário
-            flash_pos_world = self.player.position + direction * offset_dist
-            flash_pos_screen = camera.apply_coords(*flash_pos_world)
+            # Calcula a direção do clarão baseado na posição do mouse
+            mouse_pos = pygame.mouse.get_pos()
+            world_mouse_pos = camera.screen_to_world(mouse_pos)
+            direction = vec(world_mouse_pos) - self.player.position
+            if direction.length_squared() > 0:
+                direction = direction.normalize()
+                offset_dist = self.player.rect.width * 0.6
+                flash_pos_world = self.player.position + direction * offset_dist
+                flash_pos_screen = camera.apply_coords(*flash_pos_world)
 
-            # Desenha o clarão
-            flash_radius = PISTOL_MUZZLE_FLASH_SIZE // 2
-            pygame.draw.circle(screen, PISTOL_MUZZLE_FLASH_COLOR, flash_pos_screen, flash_radius)
-            # Ou usa um pequeno sprite/imagem
+                # Renderiza o clarão do disparo
+                flash_radius = PISTOL_MUZZLE_FLASH_SIZE // 2
+                pygame.draw.circle(screen, PISTOL_MUZZLE_FLASH_COLOR, flash_pos_screen, flash_radius)
         else:
-             self.muzzle_flash_timer = 0 # Garante que o timer esteja resetado
-
-# --- Métodos específicos do estilingue foram removidos (get_charge_percent, is_shooting) ---
-
-# --- Comentários dos métodos auxiliares da câmera foram removidos ---
-
-
+            self.muzzle_flash_timer = 0

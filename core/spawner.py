@@ -1,70 +1,120 @@
 import pygame
 import random
 from core.settings import MAP_WIDTH, MAP_HEIGHT, TILE_SIZE
-from graphics.sprites import Raider, WildDog # Assumindo que estes são necessários
 
 def _is_obstacle_at(game, tile_x, tile_y):
-    """Verifica se existe algum sprite de obstáculo nas coordenadas de tile fornecidas."""
+    """Verifica se existe algum sprite de obstáculo nas coordenadas de tile fornecidas.
+    
+    Args:
+        game: Instância do jogo contendo os grupos de sprites
+        tile_x (int): Coordenada X do tile a ser verificado
+        tile_y (int): Coordenada Y do tile a ser verificado
+        
+    Returns:
+        bool: True se houver um obstáculo na posição, False caso contrário
+    """
     check_rect = pygame.Rect(tile_x * TILE_SIZE, tile_y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
     for obstacle in game.obstacles:
         if obstacle.rect.colliderect(check_rect):
             return True
     return False
 
-def spawn_initial_enemies(game):
-    """Gera inimigos iniciais pelo mapa."""
-    print("Gerando inimigos...")
+def spawn_initial_enemies(game, asset_manager):
+    """Gera os inimigos iniciais distribuídos pelo mapa.
+    
+    Esta função é responsável por criar os inimigos iniciais do jogo, incluindo:
+    - Saqueadores (Raiders) distribuídos aleatoriamente
+    - Matilhas de Cães Selvagens (Wild Dogs) agrupados em packs
+    
+    Args:
+        game: Instância do jogo onde os inimigos serão spawnados
+        asset_manager: Gerenciador de assets para carregar as classes dos inimigos
+    """
+    print("Iniciando geração de inimigos...")
+
+    # Obtém as classes dos inimigos do gerenciador de assets
+    RaiderClass = asset_manager.get_sprite_class('raider')
+    WildDogClass = asset_manager.get_sprite_class('wild_dog')
+
+    if not RaiderClass or not WildDogClass:
+        print("ERRO: Falha ao carregar as classes de inimigos do AssetManager!")
+        return
+
+    # Calcula dimensões do mundo em tiles
     world_width_tiles = MAP_WIDTH // TILE_SIZE
     world_height_tiles = MAP_HEIGHT // TILE_SIZE
+    
+    # Obtém posição de spawn do jogador em tiles
     player_spawn_tile_x = game.player.rect.centerx // TILE_SIZE
     player_spawn_tile_y = game.player.rect.centery // TILE_SIZE
+    
+    # Define distância mínima de spawn dos inimigos em relação ao jogador
     min_spawn_dist_from_player = 20
 
-    # Gerar Saqueadores
+    # Geração de Saqueadores
     num_raiders = 10
     print(f"  Gerando {num_raiders} Saqueadores...")
     for i in range(num_raiders):
         attempts = 0
-        while attempts < 100:
+        while attempts < 100:  # Limite de tentativas para encontrar posição válida
             attempts += 1
+            # Gera posição aleatória dentro dos limites do mapa
             x = random.randint(5, world_width_tiles - 6)
             y = random.randint(5, world_height_tiles - 6)
+            
+            # Verifica distância do jogador
             dist_from_player = abs(x - player_spawn_tile_x) + abs(y - player_spawn_tile_y)
             if dist_from_player > min_spawn_dist_from_player:
+                # Verifica se a posição está livre de obstáculos
                 if not _is_obstacle_at(game, x, y):
-                    Raider(game, x * TILE_SIZE, y * TILE_SIZE)
+                    RaiderClass(game, x * TILE_SIZE, y * TILE_SIZE)
                     break
 
-    # Gerar matilhas de Cães Selvagens
+    # Geração de matilhas de Cães Selvagens
     num_packs = 5
     dogs_per_pack_min = 2
     dogs_per_pack_max = 4
-    pack_radius = 3
+    pack_radius = 3  # Raio máximo de dispersão dos cães em uma matilha
     print(f"  Gerando {num_packs} matilhas de Cães Selvagens...")
+    
     for i in range(num_packs):
         attempts = 0
         pack_placed = False
-        while attempts < 50:
+        
+        while attempts < 50:  # Limite de tentativas para encontrar posição válida para a matilha
             attempts += 1
+            # Gera posição central da matilha
             pack_x = random.randint(10, world_width_tiles - 11)
             pack_y = random.randint(10, world_height_tiles - 11)
+            
+            # Verifica distância do jogador
             dist_from_player = abs(pack_x - player_spawn_tile_x) + abs(pack_y - player_spawn_tile_y)
             if dist_from_player > min_spawn_dist_from_player + 5:
+                # Verifica se a posição central está livre
                 if not _is_obstacle_at(game, pack_x, pack_y):
+                    # Determina tamanho da matilha
                     pack_size = random.randint(dogs_per_pack_min, dogs_per_pack_max)
                     dogs_spawned_in_pack = 0
+                    
+                    # Gera os cães da matilha
                     for _ in range(pack_size):
                         dog_attempts = 0
-                        while dog_attempts < 20:
+                        while dog_attempts < 20:  # Limite de tentativas para cada cão
                             dog_attempts += 1
+                            # Gera posição relativa à matilha
                             dog_x = pack_x + random.randint(-pack_radius, pack_radius)
                             dog_y = pack_y + random.randint(-pack_radius, pack_radius)
+                            
+                            # Garante que o cão fique dentro dos limites do mapa
                             dog_x = max(1, min(world_width_tiles - 2, dog_x))
                             dog_y = max(1, min(world_height_tiles - 2, dog_y))
+                            
+                            # Verifica se a posição está livre
                             if not _is_obstacle_at(game, dog_x, dog_y):
-                                WildDog(game, dog_x * TILE_SIZE, dog_y * TILE_SIZE)
+                                WildDogClass(game, dog_x * TILE_SIZE, dog_y * TILE_SIZE)
                                 dogs_spawned_in_pack += 1
                                 break
                     pack_placed = True
                     break
-    print("Geração de inimigos completa.") 
+    
+    print("Geração de inimigos concluída com sucesso!") 
