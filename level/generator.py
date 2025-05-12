@@ -416,15 +416,158 @@ class LevelGenerator:
                     return False # Contém tile não permitido
         return True
 
+    def _draw_path(self, start_pos, end_pos, path_type, place_on_tiles, straightness=0.5):
+        """
+        Desenha um caminho entre dois pontos, ideal para tubulações, correias, etc.
+        
+        Args:
+            start_pos: Tupla (x, y) do ponto inicial
+            end_pos: Tupla (x, y) do ponto final
+            path_type: Tipo de tile a ser colocado ('pipe', 'conveyor', etc.)
+            place_on_tiles: Lista de tipos de tile onde o caminho pode ser traçado
+            straightness: Controla o quão reto é o caminho (0.0 a 1.0)
+        """
+        x1, y1 = start_pos
+        x2, y2 = end_pos
+        
+        # Se os pontos estão muito próximos, apenas conecta diretamente
+        if abs(x2 - x1) + abs(y2 - y1) <= 3:
+            # Linha reta simples
+            points = self._get_line_points(x1, y1, x2, y2)
+            for x, y in points:
+                if (0 <= y < self.world_height_tiles and 0 <= x < self.world_width_tiles and 
+                    self.layout[y][x] in place_on_tiles):
+                    self.layout[y][x] = path_type
+            return
+        
+        # Para caminhos mais longos, usa uma abordagem mais complexa com path finding
+        # simplificado ou curvas aleatórias
+        
+        # Decide se vai na horizontal primeiro ou na vertical primeiro
+        if random.random() < straightness:
+            # Abordagem mais direta: primeiro move em X, depois em Y
+            mid_x, mid_y = x2, y1
+        else:
+            # Abordagem alternativa: primeiro move em Y, depois em X
+            mid_x, mid_y = x1, y2
+        
+        # Primeiro segmento (pode ser horizontal ou vertical)
+        points1 = self._get_line_points(x1, y1, mid_x, mid_y)
+        # Segundo segmento (completa o caminho)
+        points2 = self._get_line_points(mid_x, mid_y, x2, y2)
+        
+        # Combina os pontos, evitando duplicar o ponto do meio
+        all_points = points1 + points2[1:]
+        
+        # Coloca o caminho
+        for x, y in all_points:
+            if (0 <= y < self.world_height_tiles and 0 <= x < self.world_width_tiles and 
+                self.layout[y][x] in place_on_tiles):
+                self.layout[y][x] = path_type
+
+    def _get_line_points(self, x1, y1, x2, y2):
+        """
+        Implementação de algorítmo Bresenham para linhas.
+        Retorna todos os pontos em uma linha entre (x1, y1) e (x2, y2).
+        """
+        points = []
+        dx = abs(x2 - x1)
+        dy = abs(y2 - y1)
+        sx = 1 if x1 < x2 else -1
+        sy = 1 if y1 < y2 else -1
+        err = dx - dy
+        
+        while True:
+            points.append((x1, y1))
+            if x1 == x2 and y1 == y2:
+                break
+            e2 = 2 * err
+            if e2 > -dy:
+                err -= dy
+                x1 += sx
+            if e2 < dx:
+                err += dx
+                y1 += sy
+                
+        return points
+
     def _create_rect_structure(self, start_x, start_y, width, height, structure_type, place_on_tiles, border_type=None):
-        """Cria uma estrutura retangular se a área for válida. Retorna sucesso e retângulo final."""
-        # TODO: Implementar a criação de estruturas retangulares
-        pass
+        """
+        Cria uma estrutura retangular se a área for válida.
+        
+        Args:
+            start_x, start_y: Coordenadas do canto superior esquerdo
+            width, height: Dimensões da estrutura
+            structure_type: Tipo de tile para o interior da estrutura
+            place_on_tiles: Lista de tipos de tile onde a estrutura pode ser colocada
+            border_type: Tipo de tile para a borda (opcional)
+            
+        Returns:
+            bool: True se a estrutura foi criada com sucesso, False caso contrário
+        """
+        # Verificar se a área está livre para colocar a estrutura
+        if not self._check_area_clear(start_x, start_y, width, height, place_on_tiles):
+            return False
+        
+        # Definir o tipo de borda, se não especificado
+        if border_type is None:
+            if structure_type == 'building':
+                border_type = 'wall'
+            else:
+                border_type = structure_type
+        
+        # Criar a estrutura
+        for y in range(start_y, start_y + height):
+            for x in range(start_x, start_x + width):
+                if (x == start_x or x == start_x + width - 1 or 
+                    y == start_y or y == start_y + height - 1):
+                    # Borda
+                    self.layout[y][x] = border_type
+                else:
+                    # Interior
+                    self.layout[y][x] = structure_type
+        
+        return True
 
     def _create_circular_structure(self, center_x, center_y, radius, structure_type, place_on_tiles):
-        """Cria uma estrutura circular. Retorna sucesso e centro/raio."""
-        # TODO: Implementar a criação de estruturas circulares
-        pass
+        """
+        Cria uma estrutura circular se a área for válida.
+        
+        Args:
+            center_x, center_y: Coordenadas do centro
+            radius: Raio da estrutura
+            structure_type: Tipo de tile para a estrutura
+            place_on_tiles: Lista de tipos de tile onde a estrutura pode ser colocada
+            
+        Returns:
+            bool: True se a estrutura foi criada com sucesso, False caso contrário
+        """
+        # Verificar se a área circular está livre
+        area_clear = True
+        for y in range(center_y - radius, center_y + radius + 1):
+            for x in range(center_x - radius, center_x + radius + 1):
+                dist = math.sqrt((x - center_x)**2 + (y - center_y)**2)
+                if dist <= radius:
+                    if not (0 <= y < self.world_height_tiles and 0 <= x < self.world_width_tiles):
+                        area_clear = False
+                        break
+                    if self.layout[y][x] not in place_on_tiles:
+                        area_clear = False
+                        break
+            if not area_clear:
+                break
+        
+        if not area_clear:
+            return False
+        
+        # Criar a estrutura circular
+        for y in range(center_y - radius, center_y + radius + 1):
+            for x in range(center_x - radius, center_x + radius + 1):
+                dist = math.sqrt((x - center_x)**2 + (y - center_y)**2)
+                if dist <= radius and 0 <= y < self.world_height_tiles and 0 <= x < self.world_width_tiles:
+                    self.layout[y][x] = structure_type
+        
+        return True
 
     def _create_complex_structure(self, start_x, start_y, width, height, structure_types, place_on_tiles):
         """Cria uma estrutura com uma mistura de tipos."""
@@ -439,11 +582,6 @@ class LevelGenerator:
     def _connect_points(self, points, path_type, place_on_tiles, max_connections=None, straightness=0.5):
         """Conecta uma lista de pontos com caminhos usando ideia de árvore geradora mínima (simplificada)."""
         # TODO: Implementar a conexão de pontos
-        pass
-
-    def _draw_path(self, start_pos, end_pos, path_type, place_on_tiles, straightness=0.5):
-        """Desenha um caminho entre dois pontos usando um algoritmo simples randomizado."""
-        # TODO: Implementar o desenho de caminhos
         pass
 
     def _add_loading_docks(self, building_x, building_y, building_w, building_h):

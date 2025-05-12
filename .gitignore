@@ -75,3 +75,7 @@ assets/cache/
 # Arquivos de debug
 debug.log
 error.log
+
+**/Source/**
+**/PSD/**
+**/*.psd
