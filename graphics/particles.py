@@ -8,7 +8,8 @@ from core.settings import (
     BLOOD_PARTICLE_SPEED,
     BLOOD_PARTICLE_COUNT,
     RAD_PARTICLE_SPEED,
-    RAD_PARTICLE_LIFETIME
+    RAD_PARTICLE_LIFETIME,
+    WATER_HIGHLIGHT
 )
 
 class BloodParticle:
@@ -258,3 +259,85 @@ class RadiationSystem:
             camera (Camera): Objeto câmera para ajuste de posição
         """
         for p in self.particles: p.draw(screen, camera)
+
+class WaterRippleSystem:
+    """Sistema de partículas que cria ondulações na água."""
+    def __init__(self):
+        """Inicializa o sistema de partículas de ondulação na água."""
+        self.ripples = []
+        self.max_ripples = 10
+
+    def add_ripple(self, x, y):
+        """Adiciona uma nova ondulação na posição especificada.
+        
+        Args:
+            x (float): Posição X da ondulação
+            y (float): Posição Y da ondulação
+        """
+        # Evita criar muitas ondulações de uma vez
+        if len(self.ripples) >= self.max_ripples:
+            return
+            
+        # Cria variações aleatórias na aparência da ondulação
+        size = random.uniform(8, 15)
+        duration = random.uniform(0.6, 1.0)
+        max_radius = random.uniform(20, 35)
+        
+        # Adiciona a ondulação à lista
+        self.ripples.append({
+            'x': x,
+            'y': y,
+            'radius': size,
+            'max_radius': max_radius,
+            'duration': duration,
+            'age': 0,
+            'color': WATER_HIGHLIGHT
+        })
+
+    def update(self, dt):
+        """Atualiza todas as ondulações ativas.
+        
+        Args:
+            dt (float): Delta time em segundos
+        """
+        # Atualiza cada ondulação
+        for ripple in self.ripples[:]:
+            ripple['age'] += dt
+            
+            # Calcula o progresso da animação (0 a 1)
+            progress = ripple['age'] / ripple['duration']
+            
+            # Aumenta o raio ao longo do tempo
+            ripple['radius'] = ripple['max_radius'] * progress
+            
+            # Remove ondulações antigas
+            if ripple['age'] >= ripple['duration']:
+                self.ripples.remove(ripple)
+
+    def draw(self, screen, camera):
+        """Desenha todas as ondulações na tela.
+        
+        Args:
+            screen (pygame.Surface): Superfície da tela para desenhar
+            camera (Camera): Objeto de câmera para transformar coordenadas
+        """
+        if not camera:
+            return
+            
+        # Desenha cada ondulação
+        for ripple in self.ripples:
+            # Calcula a opacidade (diminui com o tempo)
+            alpha = int(255 * (1 - ripple['age'] / ripple['duration']))
+            
+            # Obtém a posição na tela
+            screen_x, screen_y = camera.apply_pos((ripple['x'], ripple['y']))
+            
+            # Cria superfície com suporte a transparência
+            surf = pygame.Surface((ripple['radius'] * 2, ripple['radius'] * 2), pygame.SRCALPHA)
+            
+            # Desenha círculo com transparência
+            color_with_alpha = (*ripple['color'][:3], alpha)
+            pygame.draw.circle(surf, color_with_alpha, (ripple['radius'], ripple['radius']), ripple['radius'], 1)
+            
+            # Desenha na tela
+            screen.blit(surf, (screen_x - ripple['radius'], screen_y - ripple['radius']))

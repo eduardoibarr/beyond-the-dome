@@ -319,7 +319,7 @@ def display_intro(game):
     fade_duration = 1000
     pause_before_title = 700
     title_to_text_pause = 1000
-    line_transition_duration = 300
+    line_transition_duration = 850
 
     # Inicia a música de introdução
     intro_sound = None

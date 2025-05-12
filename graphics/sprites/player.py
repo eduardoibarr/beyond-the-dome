@@ -53,6 +53,8 @@ class Player(pygame.sprite.Sprite):
 
         # --- Atributos do Jogador ---
         self.max_speed = PLAYER_SPEED
+        self.normal_speed = PLAYER_SPEED  # Velocidade normal para referência
+        self.current_terrain = None       # Armazena o tipo de terreno atual
         self.health = PLAYER_HEALTH
         self.max_health = PLAYER_HEALTH
         self.radiation = 0
@@ -291,6 +293,9 @@ class Player(pygame.sprite.Sprite):
         Args:
             dt (float): Delta time em segundos
         """
+        # Verifica o tipo de terreno e ajusta a velocidade
+        self.check_terrain()
+        
         # Aplica aceleração e amortecimento
         self.velocity += self.acceleration * dt * 10
         self.velocity *= (1 - PLAYER_FRICTION)
@@ -484,7 +489,7 @@ class Player(pygame.sprite.Sprite):
         if self.is_in_radioactive_zone:
             self.radiation += radiation_gain_rate * dt
             # Garante que a radiação não exceda o máximo (se houver um limite)
-            # self.radiation = min(self.radiation, MAX_RADIATION_LEVEL)
+            self.radiation = min(self.radiation, RADIATION_MAX)
         else:
             # Recuperação lenta fora de zonas perigosas (opcional)
             self.radiation -= PLAYER_RADIATION_RECOVERY_RATE * dt
@@ -512,3 +517,44 @@ class Player(pygame.sprite.Sprite):
         # Opcional: Tocar um som específico para o buff
         # if hasattr(self.game, 'asset_manager'):
         #     self.game.asset_manager.play_sound('mask_buff_activate') 
+
+    def check_terrain(self):
+        """Verifica o tipo de terreno em que o jogador está e ajusta a velocidade."""
+        # Obtém a posição do jogador em coordenadas de tile
+        tile_x = int(self.position.x / TILE_SIZE)
+        tile_y = int(self.position.y / TILE_SIZE)
+        
+        # Evita índices fora dos limites do mapa
+        if (tile_x < 0 or tile_x >= self.game.map_width or 
+            tile_y < 0 or tile_y >= self.game.map_height):
+            return
+            
+        # Verifica cada tile colidindo com o jogador
+        self.current_terrain = None
+        terrain_found = False
+        
+        for tile in self.game.world_tiles:
+            if not hasattr(tile, 'kind'):
+                continue
+                
+            if tile.rect.collidepoint(self.position):
+                self.current_terrain = tile.kind
+                terrain_found = True
+                break
+        
+        # Ajusta a velocidade com base no terreno
+        if terrain_found:
+            if self.current_terrain == 'water':
+                # Movimento mais lento na água (60% da velocidade normal)
+                self.max_speed = self.normal_speed * 0.6
+                
+                # Opcional: reproduzir som de água se o jogador estiver se movendo
+                if self.velocity.length_squared() > 0.5:
+                    current_time = pygame.time.get_ticks()
+                    if current_time - self.step_timer > self.step_interval * 1000:
+                        self.step_timer = current_time
+                        if hasattr(self.game, 'asset_manager'):
+                            self.game.play_audio('water_step', volume=0.3)
+            else:
+                # Retorna à velocidade normal em outros terrenos
+                self.max_speed = self.normal_speed 

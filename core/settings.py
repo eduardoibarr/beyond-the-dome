@@ -2,7 +2,7 @@
 # CONFIGURAÇÕES BÁSICAS DO JOGO
 # =============================================================================
 # Configurações da janela e loop principal
-WIDTH = 800
+WIDTH = 1024
 HEIGHT = 600
 FPS = 60
 TITLE = "Beyond the Dome"
@@ -30,8 +30,8 @@ GREY = (128, 128, 128)
 # CONFIGURAÇÕES DO MAPA E TILES
 # =============================================================================
 # Dimensões do mapa
-MAP_WIDTH = 6400   # Largura total do mapa em pixels (aumentado de 4800)
-MAP_HEIGHT = 4800  # Altura total do mapa em pixels (aumentado de 3600)
+MAP_WIDTH = 5800   # Largura total do mapa em pixels
+MAP_HEIGHT = 4200  # Altura total do mapa em pixels
 
 # Configurações dos tiles
 TILE_SIZE = 32  # Tamanho base dos tiles em pixels
@@ -75,13 +75,13 @@ ENEMY_INVINCIBILITY_DURATION = 500
 ENEMY_RAIDER_COLOR = RED
 ENEMY_RAIDER_HEALTH = 75
 ENEMY_RAIDER_DAMAGE = 10
-ENEMY_RAIDER_SPEED = 2
+ENEMY_RAIDER_SPEED = 3
 
 # Cão Selvagem (Wild Dog)
 ENEMY_DOG_COLOR = YELLOW
 ENEMY_DOG_HEALTH = 55
 ENEMY_DOG_DAMAGE = 5
-ENEMY_DOG_SPEED = 3
+ENEMY_DOG_SPEED = 5
 
 # =============================================================================
 # CONFIGURAÇÕES DE ARMAS E COMBATE
@@ -308,9 +308,9 @@ HEALTH_PACK_HEAL_AMOUNT = 50 # Quantidade de cura do HealthPack
 
 # --- Player Settings ---
 # ... (other player settings like PLAYER_HEALTH, PLAYER_SPEED) ...
-PLAYER_RADIATION_GAIN_RATE = 5.0 # Taxa de ganho de radiação por segundo em zona perigosa
-PLAYER_RADIATION_RECOVERY_RATE = 1.0 # Taxa de recuperação fora de zonas perigosas
+PLAYER_RADIATION_GAIN_RATE = 7.0 # Taxa de ganho de radiação por segundo em zona perigosa
+PLAYER_RADIATION_RECOVERY_RATE = 0.5 # Taxa de recuperação fora de zonas perigosas
 RADIATION_DAMAGE_THRESHOLD = 60.0 # Nível de radiação para começar a tomar dano
-RADIATION_DAMAGE_MULTIPLIER = 0.5 # Multiplicador de dano por radiação por segundo
+RADIATION_DAMAGE_MULTIPLIER = 2 # Multiplicador de dano por radiação por segundo (aumentado de 0.5)
 # Add any other missing constants here (e.g., CYAN color if not defined)
 CYAN = (0, 255, 255) # Exemplo de definição de cor

@@ -25,6 +25,7 @@ def spawn_initial_enemies(game, asset_manager):
     Esta função é responsável por criar os inimigos iniciais do jogo, incluindo:
     - Saqueadores (Raiders) distribuídos aleatoriamente
     - Matilhas de Cães Selvagens (Wild Dogs) agrupados em packs
+    - Saqueador Amigável (novo) em uma posição relativamente próxima ao jogador
     
     Args:
         game: Instância do jogo onde os inimigos serão spawnados
@@ -35,6 +36,7 @@ def spawn_initial_enemies(game, asset_manager):
     # Obtém as classes dos inimigos do gerenciador de assets
     RaiderClass = asset_manager.get_sprite_class('raider')
     WildDogClass = asset_manager.get_sprite_class('wild_dog')
+    FriendlyScavengerClass = asset_manager.get_sprite_class('friendly_scavenger')
 
     if not RaiderClass or not WildDogClass:
         print("ERRO: Falha ao carregar as classes de inimigos do AssetManager!")
@@ -116,5 +118,43 @@ def spawn_initial_enemies(game, asset_manager):
                                 break
                     pack_placed = True
                     break
+    
+    # Geração do Saqueador Amigável
+    if FriendlyScavengerClass:
+        print("  Gerando Saqueador Amigável...")
+        # Queremos que o Saqueador Amigável esteja em uma distância média - nem muito longe nem muito perto
+        friendly_min_dist = 10  # Mais próximo que outros inimigos
+        friendly_max_dist = 20  # Não tão longe
+        
+        attempts = 0
+        while attempts < 100:
+            attempts += 1
+            # Gera ângulo aleatório
+            angle = random.uniform(0, 2 * 3.14159)
+            # Gera distância aleatória dentro do intervalo desejado
+            dist = random.randint(friendly_min_dist, friendly_max_dist)
+            
+            # Calcula posição baseada em coordenadas polares
+            offset_x = int(dist * pygame.math.Vector2(1, 0).rotate_rad(angle).x)
+            offset_y = int(dist * pygame.math.Vector2(1, 0).rotate_rad(angle).y)
+            
+            # Posição final
+            friendly_x = player_spawn_tile_x + offset_x
+            friendly_y = player_spawn_tile_y + offset_y
+            
+            # Garante que a posição está dentro dos limites do mapa
+            friendly_x = max(1, min(world_width_tiles - 2, friendly_x))
+            friendly_y = max(1, min(world_height_tiles - 2, friendly_y))
+            
+            # Verifica se a posição está livre de obstáculos
+            if not _is_obstacle_at(game, friendly_x, friendly_y):
+                FriendlyScavengerClass(game, friendly_x * TILE_SIZE, friendly_y * TILE_SIZE)
+                print(f"  Saqueador Amigável gerado em ({friendly_x}, {friendly_y})")
+                break
+            
+        if attempts >= 100:
+            print("  AVISO: Não foi possível gerar o Saqueador Amigável após 100 tentativas.")
+    else:
+        print("  AVISO: Classe FriendlyScavenger não encontrada no AssetManager.")
     
     print("Geração de inimigos concluída com sucesso!") 
