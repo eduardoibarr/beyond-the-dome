@@ -102,8 +102,6 @@ class Game:
         self.player = PlayerClass(self, spawn_x * TILE_SIZE, spawn_y * TILE_SIZE)
 
         self.inventory_ui = InventoryUI(self, self.player.inventory)
-        print(f"[DEBUG] Inventário inicializado com {len(self.player.inventory.slots)} slots")
-        print(f"[DEBUG] Itens no inventário: {sum(1 for slot in self.player.inventory.slots if slot is not None)}")
 
         spawn_initial_enemies(self, self.asset_manager)
         self.cause_of_death = None
@@ -129,34 +127,22 @@ class Game:
                 self.playing = False
                 self.running = False
             elif event.type == pygame.KEYDOWN:
-                print(f"[DEBUG] Tecla pressionada: {pygame.key.name(event.key)}")
                 if event.key == pygame.K_TAB:
-                    print("[DEBUG] Tecla TAB pressionada!")
-                    # Check if mission journal is open - if so, let it handle TAB navigation
                     if hasattr(self, 'mission_journal') and self.mission_journal.visible:
-                        print("[DEBUG] Journal de missões está aberto, TAB será usado para navegação")
-                        # Let mission journal handle the TAB key
                         pass
                     elif hasattr(self, 'inventory_ui'):
-                        print(f"[DEBUG] Inventário existe, visível: {self.inventory_ui.visible}")
                         self.inventory_ui.visible = not self.inventory_ui.visible
-                        print(f"[DEBUG] Inventário agora visível: {self.inventory_ui.visible}")
-                        continue  # Skip inventory input handling for this event
+                        continue
                     else:
                         print("[DEBUG] Inventário UI não existe!")
-                elif event.key == pygame.K_i:  # Alternative key for inventory
-                    print("[DEBUG] Tecla I pressionada (alternativa para inventário)!")
+                elif event.key == pygame.K_i:
                     if hasattr(self, 'inventory_ui'):
-                        print(f"[DEBUG] Inventário existe, visível: {self.inventory_ui.visible}")
                         self.inventory_ui.visible = not self.inventory_ui.visible
-                        print(f"[DEBUG] Inventário agora visível: {self.inventory_ui.visible}")
-                        continue  # Skip inventory input handling for this event
+                        continue
 
-            # Handle mission journal input first (higher priority)
             if hasattr(self, 'mission_journal'):
                 self.mission_journal.handle_input(event)
 
-            # Handle inventory input only if it's not a TAB key event and journal is not visible
             journal_is_visible = hasattr(self, 'mission_journal') and self.mission_journal.visible
             if (hasattr(self, 'inventory_ui') and 
                 not (event.type == pygame.KEYDOWN and event.key == pygame.K_TAB) and
@@ -244,9 +230,7 @@ class Game:
             self.mission_journal.draw(self.screen)
 
         if hasattr(self, 'inventory_ui'):
-            print("[DEBUG] Tentando desenhar inventário...")
             self.inventory_ui.draw(self.screen)
-            print(f"[DEBUG] Estado do inventário: visible={self.inventory_ui.visible}")
 
         pygame.display.flip()
 

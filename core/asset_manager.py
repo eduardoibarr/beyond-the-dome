@@ -55,7 +55,6 @@ class AssetManager:
                         if hasattr(module, class_name):
                             self.sprite_classes[module_name] = getattr(module, class_name)
                             self.stats['sprites_loaded'] += 1
-                            print(f"Sprite carregado: {class_name} de {filename}")
                         else:
                             print(f"Aviso: Classe {class_name} não encontrada em {filename}")
                     else:
