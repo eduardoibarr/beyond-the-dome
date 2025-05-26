@@ -1,3 +1,3 @@
-from .ai import AIController, RaiderAIController, WildDogAIController
+from .enhanced_ai import EnhancedAIController, EnhancedRaiderAI, EnhancedWildDogAI, EnhancedFriendlyScavengerAI
 
-__all__ = ['AIController', 'RaiderAIController', 'WildDogAIController']
+__all__ = ['EnhancedAIController', 'EnhancedRaiderAI', 'EnhancedWildDogAI', 'EnhancedFriendlyScavengerAI']

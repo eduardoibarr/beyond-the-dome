@@ -2,108 +2,104 @@ import pygame
 from core.settings import *
 from items.weapons import Pistol
 from graphics.particles import BloodParticleSystem
+from core.inventory import Inventory
+from items.item_base import AmmoItem, MaskItem, HealthPackItem, FilterModuleItem
+import math
 
 vec = pygame.math.Vector2
 
 class Player(pygame.sprite.Sprite):
-    """Representa o personagem controlável pelo jogador.
-    
-    Gerencia:
-    - Movimentação e física
-    - Animações e aparência visual
-    - Sistema de vida e dano
-    - Interação com armas e itens
-    - Entrada do jogador (teclado e mouse)
-    - Efeitos visuais (partículas, flash de invencibilidade)
-    """
     def __init__(self, game, x_pixel, y_pixel):
-        """Inicializa o jogador.
-        
-        Args:
-            game (Game): Referência ao objeto principal do jogo
-            x_pixel (int): Coordenada X inicial em pixels
-            y_pixel (int): Coordenada Y inicial em pixels
-        """
         self.groups = game.all_sprites
         super().__init__(self.groups)
         self.game = game
         self._layer = PLAYER_RENDER_LAYER
 
-        # --- Configuração das Animações ---
         self.animations = {}
         self.current_animation = None
-        self._setup_animations() # Chama método auxiliar
+        self._setup_animations()
 
-        # Imagem de fallback se as animações falharem
         if not self.current_animation:
             print("Animações do jogador desativadas. Usando fallback.")
             self.image = pygame.Surface((PLAYER_WIDTH, PLAYER_HEIGHT))
             self.image.fill(PLAYER_COLOR)
-            self.current_animation = None # Garante que não tente atualizar animações
+            self.current_animation = None
 
         self.original_image = self.image
         self.rect = self.image.get_rect()
         self.facing_right = True
 
-        # --- Posição e Movimento ---
         self.position = vec(x_pixel, y_pixel)
         self.velocity = vec(0, 0)
         self.acceleration = vec(0, 0)
+        self.direction = vec(1, 0)
         self.rect.center = self.position
+        self.size = PLAYER_WIDTH
+        self.state = 'idle'
 
-        # --- Atributos do Jogador ---
         self.max_speed = PLAYER_SPEED
-        self.normal_speed = PLAYER_SPEED  # Velocidade normal para referência
-        self.current_terrain = None       # Armazena o tipo de terreno atual
+        self.normal_speed = PLAYER_SPEED
+        self.current_terrain = None
         self.health = PLAYER_HEALTH
         self.max_health = PLAYER_HEALTH
         self.radiation = 0
         self.last_hit_time = 0
         self.invincible = False
-        # --- Mask Buff ---
+
         self.mask_buff_active = False
         self.mask_buff_timer = 0.0
-        # --- End Mask Buff ---
+
         self.ammo_in_mag = PISTOL_MAGAZINE_SIZE
-        self.reserve_ammo = BULLET_INITIAL_AMMO - PISTOL_MAGAZINE_SIZE
+        self.reserve_ammo = PLAYER_STARTING_RESERVE_AMMO
         self.pistol = Pistol(game, self)
+        self.current_weapon = self.pistol
         self.blood_system = BloodParticleSystem()
         self.has_filter_module = False
         self.is_in_radioactive_zone = False
 
-        # --- Temporizadores ---
         self.step_timer = 0
         self.step_interval = 0.35
-        self.last_melee_attack_time = 0 # Tempo do último ataque corpo a corpo
-        self.melee_cooldown = PLAYER_MELEE_COOLDOWN # Obtido de settings.py
+        self.last_melee_attack_time = 0
+        self.melee_cooldown = PLAYER_MELEE_COOLDOWN
+
+        self.walk_frame = 0
+        self.death_frame = 0
+        self.animation_speed = 0.1
+        self.animation_timer = 0
+
+        self.inventory = Inventory(size=20)
+
+        ammo_item = AmmoItem("pistol", 15)
+        ammo_item.load_icon(self.game.asset_manager)
+        self.inventory.add_item(ammo_item)
+
+        mask_item = MaskItem()
+        mask_item.load_icon(self.game.asset_manager)
+        self.inventory.add_item(mask_item)
 
         pygame.mouse.set_visible(CURSOR_VISIBLE)
 
     def _setup_animations(self):
-        """Configura as animações do jogador usando o AssetManager."""
-        # Verifica se o asset manager está disponível
+
         if not hasattr(self.game, 'asset_manager'):
             print("Erro: Asset manager não encontrado.")
             return
-            
+
         try:
-            # Tenta obter animações do AssetManager
+
             idle_frames = self.game.asset_manager.get_animation('player_idle')
             run_frames = self.game.asset_manager.get_animation('player_run')
             walk_frames = self.game.asset_manager.get_animation('player_walk')
             hurt_frames = self.game.asset_manager.get_animation('player_hurt')
             shoot_frames = self.game.asset_manager.get_animation('player_shoot')
             attack_frames = self.game.asset_manager.get_animation('player_attack')
-            
-            # Usa a animação run como walk se walk não estiver disponível
+
             if not walk_frames and run_frames:
                 walk_frames = run_frames
-                
-            # Verifica se pelo menos a animação idle foi carregada
+
             if not idle_frames:
                 raise ValueError("Animação 'player_idle' não encontrada no AssetManager.")
-                
-            # Define as animações no dicionário
+
             self.animations = {
                 ANIM_PLAYER_IDLE: idle_frames,
                 ANIM_PLAYER_RUN: run_frames if run_frames else idle_frames,
@@ -112,27 +108,20 @@ class Player(pygame.sprite.Sprite):
                 ANIM_PLAYER_SHOOT: shoot_frames if shoot_frames else idle_frames,
                 ANIM_PLAYER_ATTACK: attack_frames if attack_frames else idle_frames
             }
-            
-            # Define a animação inicial
+
             self.current_animation = ANIM_PLAYER_IDLE
             self.animation_frame = 0
-            self.animation_frame_duration = 0.1 # Duração padrão do quadro
+            self.animation_frame_duration = 0.1
             self.animation_timer = 0
             self.image = self.animations[self.current_animation][0]
             print("Animações do jogador configuradas com sucesso.")
-            
+
         except Exception as e:
             print(f"Erro ao configurar animações do jogador: {e}. Animações desativadas.")
             self.animations = {}
             self.current_animation = None
-            # Define a imagem de fallback (garantida pelo código no __init__)
-    
+
     def take_damage(self, amount):
-        """Aplica dano ao jogador, ativando a invencibilidade temporária.
-        
-        Args:
-            amount (int): Quantidade de dano a ser aplicada
-        """
         now = pygame.time.get_ticks()
         if not self.invincible:
             self.health -= amount
@@ -141,8 +130,7 @@ class Player(pygame.sprite.Sprite):
             self.last_hit_time = now
             self.invincible = True
             self.set_animation(ANIM_PLAYER_HURT)
-            
-            # Reproduz som de dano
+
             if hasattr(self.game, 'asset_manager'):
                 self.game.asset_manager.play_sound('player_hurt')
 
@@ -150,18 +138,11 @@ class Player(pygame.sprite.Sprite):
                 print("Jogador morreu!")
 
     def set_animation(self, animation_name):
-        """Define a animação atual do jogador.
-        
-        Impede a interrupção de animações importantes (como dano).
-        
-        Args:
-            animation_name (str): Nome da animação a ser definida (e.g., ANIM_PLAYER_RUN)
-        """
         if not self.current_animation or self.current_animation == animation_name:
             return
 
         if animation_name in self.animations:
-            # Impede a troca de animação durante a animação de dano
+
             if self.current_animation == ANIM_PLAYER_HURT and self.animation_frame < len(self.animations[ANIM_PLAYER_HURT]) - 1:
                  return
 
@@ -169,171 +150,92 @@ class Player(pygame.sprite.Sprite):
             self.animation_frame = 0
             self.animation_timer = 0
         else:
-            # Define animação padrão (ocioso) se a animação solicitada não existir
+
             if ANIM_PLAYER_IDLE in self.animations:
                  self.current_animation = ANIM_PLAYER_IDLE
             else:
                  self.current_animation = None
 
-    def update_animation(self, dt):
-        """Atualiza o quadro da animação atual.
-        
-        Ajusta a velocidade da animação de corrida com base na velocidade do jogador.
-        Gerencia a transição de animações não contínuas (dano, ataque).
-        Aplica o efeito visual de invencibilidade.
-        
-        Args:
-            dt (float): Delta time em segundos
-        """
-        if not self.current_animation: return
-
-        frames = self.animations[self.current_animation]
-        num_frames = len(frames)
-        if num_frames == 0: return
-
-        # Ajusta a duração do quadro (velocidade da animação)
-        current_frame_duration = self.animation_frame_duration
-        if self.current_animation == ANIM_PLAYER_RUN:
-            speed_mag = self.velocity.length()
-            if speed_mag > 1.0 and self.max_speed > 0:
-                 speed_factor = max(0.5, min(1.5, speed_mag / self.max_speed))
-                 current_frame_duration = self.animation_frame_duration / speed_factor
-        elif self.current_animation == ANIM_PLAYER_HURT:
-             current_frame_duration = 0.08 # Animação de dano mais rápida
-
-        # Avança o quadro da animação
-        self.animation_timer += dt
-        while self.animation_timer >= current_frame_duration:
-            self.animation_timer -= current_frame_duration
-            self.animation_frame = (self.animation_frame + 1) % num_frames
-
-            # Retorna para animação ociosa após animações não contínuas
-            if self.animation_frame == 0:
-                 if self.current_animation in [ANIM_PLAYER_HURT, ANIM_PLAYER_ATTACK, ANIM_PLAYER_SHOOT]:
-                      self.set_animation(ANIM_PLAYER_IDLE)
-
-        # Atualiza a imagem do sprite
-        self.original_image = frames[self.animation_frame]
-        self.image = self.original_image
-        if not self.facing_right:
-            self.image = pygame.transform.flip(self.image, True, False)
-
-        # Aplica efeito visual de invencibilidade (piscar)
-        if self.invincible:
-            now = pygame.time.get_ticks()
-            alpha = 100 if (now - self.last_hit_time) % 200 < 100 else 255
-            try:
-                temp_image = self.image.copy()
-                temp_image.fill((255, 255, 255, alpha), special_flags=pygame.BLEND_RGBA_MULT)
-                self.image = temp_image
-            except pygame.error:
-                 temp_image = self.image.copy()
-                 temp_image.set_alpha(alpha)
-                 self.image = temp_image
-
-
     def get_keys(self):
-        """Processa a entrada do teclado e mouse para ações do jogador."""
         keys = pygame.key.get_pressed()
         mouse_buttons = pygame.mouse.get_pressed()
         mouse_pos = pygame.mouse.get_pos()
 
-        # Movimento (define a aceleração)
         self.acceleration = vec(0, 0)
         if keys[pygame.K_a]: self.acceleration.x = -self.max_speed * 8
         if keys[pygame.K_d]: self.acceleration.x = self.max_speed * 8
         if keys[pygame.K_w]: self.acceleration.y = -self.max_speed * 8
         if keys[pygame.K_s]: self.acceleration.y = self.max_speed * 8
 
-        # Ações
-        if keys[pygame.K_r]: self.pistol.start_reload() # Recarregar
-        if keys[pygame.K_SPACE]: self.attack() # Ataque corpo a corpo
+        if self.acceleration.length() > 0:
+            self.state = 'walking'
+        else:
+            self.state = 'idle'
 
-        # Mira e Disparo
+        if keys[pygame.K_r]:
+            self.pistol.start_reload()
+            if self.current_weapon:
+                self.current_weapon.start_reload()
+        if keys[pygame.K_SPACE]:
+            self.attack()
+
         if self.game.camera:
-            # Define a direção que o jogador está olhando baseado no mouse
+
+            world_mouse_pos = self.game.camera.screen_to_world(mouse_pos)
+            self.direction = (vec(world_mouse_pos) - self.position).normalize() if (vec(world_mouse_pos) - self.position).length() > 0 else self.direction
+
             screen_center = vec(self.game.screen.get_width() // 2, self.game.screen.get_height() // 2)
             mouse_offset = vec(mouse_pos) - screen_center
             self.facing_right = mouse_offset.x > 0
 
-            # Dispara com o botão esquerdo do mouse
             if mouse_buttons[0]:
-                world_mouse_pos = self.game.camera.screen_to_world(mouse_pos)
                 direction = vec(world_mouse_pos) - self.position
                 if direction.length() > 0:
                     direction = direction.normalize()
                     self.pistol.shoot(direction)
+                    if self.current_weapon:
+                        self.current_weapon.shoot(direction)
+                    self.state = 'shooting'
 
-        # Define a animação baseada no estado
         if self.current_animation != ANIM_PLAYER_HURT:
             if self.acceleration.length_squared() > 0:
-                # Define animação de corrida ou caminhada baseado na velocidade
+
                 if self.velocity.length_squared() > (self.max_speed * 0.5)**2:
                     self.set_animation(ANIM_PLAYER_RUN)
                 else:
                     self.set_animation(ANIM_PLAYER_WALK)
             else:
-                # Define animação de disparo ou ocioso
+
                 is_shooting = (pygame.time.get_ticks() - self.pistol.last_shot_time < 100)
                 if self.pistol.reloading or is_shooting:
                     self.set_animation(ANIM_PLAYER_SHOOT)
                 elif self.current_animation != ANIM_PLAYER_ATTACK:
                      self.set_animation(ANIM_PLAYER_IDLE)
 
-
     def move(self, dt):
-        """Aplica movimento, física e colisões ao jogador.
-        
-        Implementa:
-        - Movimento baseado em aceleração e velocidade
-        - Fricção/Amortecimento simples
-        - Limite de velocidade
-        - Detecção e resolução de colisões com obstáculos
-        
-        Args:
-            dt (float): Delta time em segundos
-        """
-        # Verifica o tipo de terreno e ajusta a velocidade
+
         self.check_terrain()
-        
-        # Aplica aceleração e amortecimento
+
         self.velocity += self.acceleration * dt * 10
         self.velocity *= (1 - PLAYER_FRICTION)
 
-        # Limita a velocidade máxima
         if self.velocity.length_squared() > self.max_speed * self.max_speed:
             if self.velocity.length_squared() > 0:
                  self.velocity.scale_to_length(self.max_speed)
 
-        # Para o jogador se a velocidade for muito baixa e não houver aceleração
         if self.velocity.length_squared() < (0.5 * TILE_SIZE)**2 and self.acceleration.length_squared() == 0:
             self.velocity = vec(0, 0)
 
-        # Calcula a nova posição
         displacement = self.velocity * dt
         new_position = self.position + displacement
 
-        # Resolve colisões
         self.position = self.collide_with_obstacles(new_position)
         self.rect.center = self.position
 
-
     def collide_with_obstacles(self, new_position):
-        """Verifica e resolve colisões com obstáculos.
-        
-        Move o jogador de volta para a posição anterior à colisão
-        separadamente nos eixos X e Y.
-        
-        Args:
-            new_position (vec): A posição potencial do jogador após o movimento
-            
-        Returns:
-            vec: A posição final ajustada após a resolução de colisões
-        """
         potential_rect = self.rect.copy()
         final_pos = new_position.copy()
 
-        # Verifica colisão no eixo X
         potential_rect.centerx = new_position.x
         potential_rect.centery = self.position.y
         for obstacle in self.game.obstacles:
@@ -344,7 +246,6 @@ class Player(pygame.sprite.Sprite):
                 potential_rect.centerx = final_pos.x
                 break
 
-        # Verifica colisão no eixo Y
         potential_rect.centery = new_position.y
         for obstacle in self.game.obstacles:
             if potential_rect.colliderect(obstacle.rect):
@@ -355,22 +256,17 @@ class Player(pygame.sprite.Sprite):
 
         return final_pos
 
-
     def attack(self):
-        """Executa um ataque corpo a corpo, respeitando o cooldown."""
-        # TODO: Implementar cooldown do ataque corpo a corpo - Feito
+
         now = pygame.time.get_ticks()
         if now - self.last_melee_attack_time < self.melee_cooldown:
-             return # Impede o ataque se estiver em cooldown
-             
-        # Impede o ataque se já estiver atacando ou tomando dano
+             return
+
         if self.current_animation in [ANIM_PLAYER_ATTACK, ANIM_PLAYER_HURT]: return
 
-        self.last_melee_attack_time = now # Registra o tempo do ataque
+        self.last_melee_attack_time = now
         self.set_animation(ANIM_PLAYER_ATTACK)
-        # self.game.play_audio('player_attack') # Tocar som de ataque
 
-        # Cria uma hitbox simples na frente do jogador
         hitbox_offset = 30
         hitbox_width = 40
         hitbox_height = self.rect.height * 0.8
@@ -379,61 +275,47 @@ class Player(pygame.sprite.Sprite):
         attack_hitbox = pygame.Rect(0, 0, hitbox_width, hitbox_height)
         attack_hitbox.center = (hitbox_center_x, hitbox_center_y)
 
-        # Verifica acertos em inimigos
         for enemy in self.game.enemies:
             if attack_hitbox.colliderect(enemy.rect):
                  if hasattr(enemy, 'take_damage'):
                       enemy.take_damage(MELEE_WEAPON_DAMAGE)
 
-
     def update(self, dt):
-        """Loop de atualização principal do jogador.
-        
-        Coordena todas as atualizações:
-        - Entrada
-        - Movimento e colisão
-        - Radiação
-        - Arma
-        - Partículas
-        - Estado de invencibilidade
-        - Animação
-        
-        Args:
-            dt (float): Delta time em segundos
-        """
-        # --- Atualiza Buffs ---
+
         if self.mask_buff_active:
             self.mask_buff_timer -= dt
             if self.mask_buff_timer <= 0:
                 self.mask_buff_active = False
                 self.mask_buff_timer = 0
                 print("Mask buff expired.")
-                # Opcional: Tocar um som de expiração
-                # if hasattr(self.game, 'asset_manager'):
-                #     self.game.asset_manager.play_sound('mask_buff_expire')
 
-        # --- Atualiza outros estados ---
         self.get_keys()
         self.move(dt)
         self.update_radiation(dt)
         self.pistol.update(dt)
         self.blood_system.update(dt)
 
-        # Atualiza estado de invencibilidade
         if self.invincible and pygame.time.get_ticks() - self.last_hit_time > PLAYER_INVINCIBILITY_DURATION:
             self.invincible = False
             if self.current_animation == ANIM_PLAYER_HURT and self.animation_frame == 0:
                  self.set_animation(ANIM_PLAYER_IDLE)
 
-        # Atualiza animação
-        self.update_animation(dt)
+        self.animation_timer += dt
+        if self.animation_timer >= self.animation_speed:
+            self.animation_timer = 0
+            if self.state == 'walking' and self.velocity.length() > 0:
+                self.walk_frame += 1
+            elif self.state == 'dead':
+                if self.death_frame < 3:
+                    self.death_frame += 1
 
+        self._create_sprite()
+
+        self.check_terrain()
 
     def draw_weapon(self, screen, camera):
-        """Desenha a arma e a mira na tela."""
         if not camera: return
 
-        # Desenha a mira (cursor)
         mouse_pos = pygame.mouse.get_pos()
         cursor_size = 16
         cursor_color = WHITE
@@ -446,109 +328,78 @@ class Player(pygame.sprite.Sprite):
                         (mouse_pos[0], mouse_pos[1] - cursor_size),
                         (mouse_pos[0], mouse_pos[1] + cursor_size), cursor_thickness)
 
-        # Desenha efeitos da arma (clarão) e partículas de sangue
         self.pistol.draw(screen, camera)
         self.blood_system.draw(screen, camera)
 
     def has_reserve_ammo(self):
-        """Verifica se o jogador tem munição na reserva."""
         return self.reserve_ammo > 0
 
     def can_reload(self):
-        """Verifica se o jogador pode e precisa recarregar."""
         return (self.pistol.ammo_in_mag < PISTOL_MAGAZINE_SIZE and
                 self.has_reserve_ammo())
 
     def take_ammo_from_reserve(self, amount_needed):
-        """Retira munição da reserva para o pente.
-        
-        Args:
-            amount_needed (int): Quantidade de munição necessária
-            
-        Returns:
-            int: Quantidade de munição efetivamente transferida
-        """
         can_take = min(amount_needed, self.reserve_ammo)
         self.reserve_ammo -= can_take
         return can_take
 
     def update_radiation(self, dt):
-        """Atualiza o nível de radiação/toxicidade do jogador."""
-        # Verifica se está em zona radioativa (lógica a ser implementada em outro lugar,
-        # por exemplo, na colisão com tiles ou áreas específicas)
-        # self.is_in_radioactive_zone = self.check_radioactive_zone() # Exemplo
 
-        radiation_gain_rate = PLAYER_RADIATION_GAIN_RATE # Taxa padrão de ganho
+        radiation_gain_rate = PLAYER_RADIATION_GAIN_RATE
 
-        # Reduz ou anula o ganho de radiação se o buff da máscara estiver ativo
         if self.mask_buff_active:
-            # Exemplo: Anula completamente o ganho enquanto o buff está ativo
+
             radiation_gain_rate = 0
-            # Ou reduz pela metade: radiation_gain_rate /= 2
 
         if self.is_in_radioactive_zone:
             self.radiation += radiation_gain_rate * dt
-            # Garante que a radiação não exceda o máximo (se houver um limite)
+
             self.radiation = min(self.radiation, RADIATION_MAX)
         else:
-            # Recuperação lenta fora de zonas perigosas (opcional)
+
             self.radiation -= PLAYER_RADIATION_RECOVERY_RATE * dt
-            self.radiation = max(0, self.radiation) # Garante que não fique negativo
+            self.radiation = max(0, self.radiation)
 
-        # Aplica efeitos da radiação (ex: dano contínuo, efeitos visuais)
         if self.radiation > RADIATION_DAMAGE_THRESHOLD:
-            # Calcula dano baseado no nível de radiação
-            damage = (self.radiation - RADIATION_DAMAGE_THRESHOLD) * RADIATION_DAMAGE_MULTIPLIER * dt
-            self.take_damage(damage) # Aplica dano (sem invencibilidade contínua?)
 
-        # Atualiza a UI ou efeitos visuais relacionados à radiação
-        # Ex: self.game.hud.update_radiation_bar(self.radiation)
+            damage = (self.radiation - RADIATION_DAMAGE_THRESHOLD) * RADIATION_DAMAGE_MULTIPLIER * dt
+            self.take_damage(damage)
 
     def collect_filter_module(self):
-        """Ativa o efeito do módulo de filtro coletado."""
         print("Jogador coletou o módulo de filtro!")
         self.has_filter_module = True
 
     def apply_mask_buff(self, duration):
-        """Ativa o buff da máscara reforçada."""
         self.mask_buff_active = True
         self.mask_buff_timer = duration
         print(f"Mask buff applied for {duration} seconds.")
-        # Opcional: Tocar um som específico para o buff
-        # if hasattr(self.game, 'asset_manager'):
-        #     self.game.asset_manager.play_sound('mask_buff_activate') 
 
     def check_terrain(self):
-        """Verifica o tipo de terreno em que o jogador está e ajusta a velocidade."""
-        # Obtém a posição do jogador em coordenadas de tile
+
         tile_x = int(self.position.x / TILE_SIZE)
         tile_y = int(self.position.y / TILE_SIZE)
-        
-        # Evita índices fora dos limites do mapa
-        if (tile_x < 0 or tile_x >= self.game.map_width or 
+
+        if (tile_x < 0 or tile_x >= self.game.map_width or
             tile_y < 0 or tile_y >= self.game.map_height):
             return
-            
-        # Verifica cada tile colidindo com o jogador
+
         self.current_terrain = None
         terrain_found = False
-        
+
         for tile in self.game.world_tiles:
             if not hasattr(tile, 'kind'):
                 continue
-                
+
             if tile.rect.collidepoint(self.position):
                 self.current_terrain = tile.kind
                 terrain_found = True
                 break
-        
-        # Ajusta a velocidade com base no terreno
+
         if terrain_found:
             if self.current_terrain == 'water':
-                # Movimento mais lento na água (60% da velocidade normal)
+
                 self.max_speed = self.normal_speed * 0.6
-                
-                # Opcional: reproduzir som de água se o jogador estiver se movendo
+
                 if self.velocity.length_squared() > 0.5:
                     current_time = pygame.time.get_ticks()
                     if current_time - self.step_timer > self.step_interval * 1000:
@@ -556,5 +407,108 @@ class Player(pygame.sprite.Sprite):
                         if hasattr(self.game, 'asset_manager'):
                             self.game.play_audio('water_step', volume=0.3)
             else:
-                # Retorna à velocidade normal em outros terrenos
-                self.max_speed = self.normal_speed 
+
+                self.max_speed = self.normal_speed
+
+    def _create_sprite(self):
+
+        if hasattr(self.game, 'asset_manager'):
+
+            hero_base = "assets/images/tds-modern-hero-weapons-and-props/"
+
+            if self.state == 'dead':
+
+                frame_num = min(self.death_frame + 1, 4)
+                asset_path = hero_base + f"Hero_Die/{frame_num}.png"
+            elif self.current_weapon:
+                weapon_name = self.current_weapon.name
+                if weapon_name == "Pistol":
+                    if self.state == 'shooting':
+                        asset_path = hero_base + "Hero_Pistol/Shot/Hero_Pistol_Fire.png"
+                    else:
+                        asset_path = hero_base + "Hero_Pistol/Hero_Pistol.png"
+                elif weapon_name == "Rifle":
+                    if self.state == 'shooting':
+                        asset_path = hero_base + "Hero_Rifle/Shot/Hero_Rifle_Fire.png"
+                    else:
+                        asset_path = hero_base + "Hero_Rifle/Hero_Rifle.png"
+                elif weapon_name == "Machine Gun":
+                    asset_path = hero_base + "Hero_MachineGun/Hero_MachineGun.png"
+                elif weapon_name == "Flamethrower":
+                    asset_path = hero_base + "Hero_Flamethrower/Hero_Flamethrower.png"
+                elif weapon_name == "Grenade Launcher":
+                    asset_path = hero_base + "Hero_GrenadeLauncher/Hero_GrenadeLauncher.png"
+                else:
+
+                    frame_num = (self.walk_frame // 5) % 7 + 1
+                    asset_path = hero_base + f"Hero_Walk/With Kneepads/{frame_num}.png"
+            else:
+
+                if self.state == 'walking':
+                    frame_num = (self.walk_frame // 5) % 7 + 1
+                    asset_path = hero_base + f"Hero_Walk/With Kneepads/{frame_num}.png"
+                else:
+
+                    asset_path = hero_base + "Hero_Walk/With Kneepads/1.png"
+
+            try:
+                self.image = self.game.asset_manager.get_image(asset_path).copy()
+
+                if self.image.get_width() != self.size or self.image.get_height() != self.size:
+                    self.image = pygame.transform.scale(self.image, (self.size, self.size))
+
+                angle = math.degrees(math.atan2(-self.direction.y, self.direction.x))
+                self.image = pygame.transform.rotate(self.image, angle)
+
+                self.rect = self.image.get_rect(center=self.rect.center)
+                return
+            except Exception as e:
+                print(f"Erro ao carregar sprite do player: {e}")
+
+        surf = pygame.Surface((self.size, self.size), pygame.SRCALPHA)
+        center = self.size // 2
+
+        if self.state == 'dead':
+            body_color = GRAY
+            head_color = DARK_GRAY
+        elif self.invincible and int(pygame.time.get_ticks() / 100) % 2:
+
+            body_color = WHITE
+            head_color = LIGHT_GRAY
+        else:
+            body_color = PLAYER_COLOR
+            head_color = PLAYER_HEAD_COLOR
+
+        pygame.draw.circle(surf, body_color, (center, center), self.size // 2)
+        pygame.draw.circle(surf, BLACK, (center, center), self.size // 2, 2)
+
+        head_radius = self.size // 4
+        head_offset = self.size // 4
+        head_x = center + int(self.direction.x * head_offset)
+        head_y = center + int(self.direction.y * head_offset)
+        pygame.draw.circle(surf, head_color, (head_x, head_y), head_radius)
+        pygame.draw.circle(surf, BLACK, (head_x, head_y), head_radius, 1)
+
+        if self.state != 'dead':
+            eye_offset = head_radius // 2
+            eye_radius = 2
+
+            perp_x = -self.direction.y
+            perp_y = self.direction.x
+
+            eye1_x = head_x + int(perp_x * eye_offset) + int(self.direction.x * eye_offset)
+            eye1_y = head_y + int(perp_y * eye_offset) + int(self.direction.y * eye_offset)
+            pygame.draw.circle(surf, BLACK, (eye1_x, eye1_y), eye_radius)
+
+            eye2_x = head_x - int(perp_x * eye_offset) + int(self.direction.x * eye_offset)
+            eye2_y = head_y - int(perp_y * eye_offset) + int(self.direction.y * eye_offset)
+            pygame.draw.circle(surf, BLACK, (eye2_x, eye2_y), eye_radius)
+
+        if self.state != 'dead':
+            line_start = (center, center)
+            line_end = (center + int(self.direction.x * self.size // 2),
+                       center + int(self.direction.y * self.size // 2))
+            pygame.draw.line(surf, DARK_GRAY, line_start, line_end, 2)
+
+        self.image = surf
+        self.rect = self.image.get_rect(center=self.rect.center)

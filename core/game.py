@@ -16,75 +16,63 @@ from graphics.particles import RadiationSystem
 from level.generator import LevelGenerator
 from graphics.camera import Camera
 from graphics.ui.hud import draw_hud
+from graphics.ui.screens import display_intro
+from core.inventory import InventoryUI
 
 class Game:
-    """Classe principal do jogo, responsável por gerenciar o loop principal e todos os subsistemas.
-    Controla a inicialização, atualização e renderização do jogo, além de gerenciar recursos e estados.
-    """
     def __init__(self):
-        """Inicializa o jogo e todos os seus subsistemas."""
-        # Inicialização do Pygame e configurações básicas
+
         pygame.init()
         pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=512)
         self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
         pygame.display.set_caption(TITLE)
         self.clock = pygame.time.Clock()
-        
-        # Estados do jogo
-        self.running = True      # Indica se o jogo deve continuar rodando
-        self.playing = False     # Indica se uma partida está em andamento
-        self.dt = 0             # Delta time (tempo entre frames)
-        self.cause_of_death = None  # Armazena a causa da morte do jogador
 
-        # Dimensões do mapa
+        self.running = True
+        self.playing = False
+        self.dt = 0
+        self.cause_of_death = None
+
         self.map_width = MAP_WIDTH
         self.map_height = MAP_HEIGHT
 
-        # Carrega fontes do jogo
         self.load_fonts()
 
-        # Inicializa gerenciadores de recursos
-        self.asset_manager = AssetManager()  # Gerenciador de assets (sprites, imagens, etc)
-        self.audio_manager = AudioManager(self.asset_manager)  # Gerenciador de áudio
+        self.asset_manager = AssetManager()
+        self.audio_manager = AudioManager(self.asset_manager)
 
-        # Inicializa sistema de partículas para efeitos visuais
         self.particle_systems = type('ParticleSystems', (), {})()
-        self.particle_systems.radiation = RadiationSystem()  # Sistema de partículas de radiação
+        self.particle_systems.radiation = RadiationSystem()
 
-        # Grupos de sprites e referências
-        self.all_sprites = None      # Grupo contendo todos os sprites do jogo
-        self.world_tiles = None      # Grupo de tiles do mundo
-        self.enemies = None          # Grupo de inimigos
-        self.bullets = None          # Grupo de projéteis
-        self.obstacles = None        # Grupo de obstáculos
-        self.radioactive_zones = None # Grupo de zonas radioativas
-        self.items = None            # Grupo de itens coletáveis
-        self.camera = None           # Sistema de câmera
-        self.player = None           # Referência ao jogador
-        self.level_generator = None  # Gerador de níveis
+        self.all_sprites = None
+        self.world_tiles = None
+        self.enemies = None
+        self.bullets = None
+        self.obstacles = None
+        self.radioactive_zones = None
+        self.items = None
+        self.camera = None
+        self.player = None
+        self.level_generator = None
 
-        # Inicializa gerador de ruído para geração procedural
         self.noise_generator = NoiseGenerator(
-            seed=random.randint(0, 1000),  # Semente aleatória para geração
-            scale=100.0,                   # Escala do ruído
-            octaves=6,                     # Número de camadas de ruído
-            persistence=0.5,               # Persistência do ruído
-            lacunarity=2.0                 # Lacunaridade do ruído
+            seed=random.randint(0, 1000),
+            scale=100.0,
+            octaves=6,
+            persistence=0.5,
+            lacunarity=2.0
         )
 
     def load_fonts(self):
-        """Carrega e configura as fontes utilizadas no jogo.
-        Tenta carregar a fonte Arial, mas usa a fonte padrão do sistema como fallback.
-        """
         try:
             font_path = pygame.font.match_font('arial') or pygame.font.get_default_font()
-            self.font = pygame.font.Font(font_path, HUD_FONT_SIZE)              # Fonte para HUD
-            self.intro_title_font = pygame.font.Font(font_path, INTRO_TITLE_FONT_SIZE)  # Fonte para títulos
-            self.intro_font = pygame.font.Font(font_path, INTRO_FONT_SIZE)      # Fonte para texto introdutório
-            self.prompt_font = pygame.font.Font(font_path, PROMPT_FONT_SIZE)    # Fonte para prompts
-            self.game_over_font = pygame.font.Font(font_path, GAME_OVER_FONT_SIZE)  # Fonte para tela de game over
+            self.font = pygame.font.Font(font_path, HUD_FONT_SIZE)
+            self.intro_title_font = pygame.font.Font(font_path, INTRO_TITLE_FONT_SIZE)
+            self.intro_font = pygame.font.Font(font_path, INTRO_FONT_SIZE)
+            self.prompt_font = pygame.font.Font(font_path, PROMPT_FONT_SIZE)
+            self.game_over_font = pygame.font.Font(font_path, GAME_OVER_FONT_SIZE)
         except Exception:
-            # Fallback para fonte padrão em caso de erro
+
             self.font = pygame.font.Font(None, HUD_FONT_SIZE)
             self.intro_title_font = pygame.font.Font(None, INTRO_TITLE_FONT_SIZE)
             self.intro_font = pygame.font.Font(None, INTRO_FONT_SIZE)
@@ -92,8 +80,6 @@ class Game:
             self.game_over_font = pygame.font.Font(None, GAME_OVER_FONT_SIZE)
 
     def new(self):
-        """Inicia uma nova partida, reinicializando todos os grupos e criando um novo nível."""
-        # Inicializa grupos de sprites
         self.all_sprites = pygame.sprite.Group()
         self.world_tiles = pygame.sprite.Group()
         self.enemies = pygame.sprite.Group()
@@ -102,15 +88,11 @@ class Game:
         self.radioactive_zones = pygame.sprite.Group()
         self.items = pygame.sprite.Group()
 
-        # Gera novo nível e obtém ponto de spawn
         self.level_generator = LevelGenerator(self)
         spawn_point = self.level_generator.create_level()
-        
-        # Inicializa câmera se ainda não existir
+
         if not self.camera:
             self.camera = Camera(self.map_width, self.map_height)
-
-        # Cria jogador no ponto de spawn
         spawn_x, spawn_y = spawn_point
         PlayerClass = self.asset_manager.get_sprite_class('player')
         if not PlayerClass:
@@ -119,154 +101,168 @@ class Game:
             return
         self.player = PlayerClass(self, spawn_x * TILE_SIZE, spawn_y * TILE_SIZE)
 
-        # Spawna inimigos iniciais
-        spawn_initial_enemies(self, self.asset_manager)
+        self.inventory_ui = InventoryUI(self, self.player.inventory)
+        print(f"[DEBUG] Inventário inicializado com {len(self.player.inventory.slots)} slots")
+        print(f"[DEBUG] Itens no inventário: {sum(1 for slot in self.player.inventory.slots if slot is not None)}")
 
-        # Reseta estado da partida
+        spawn_initial_enemies(self, self.asset_manager)
         self.cause_of_death = None
         self.playing = True
         self.run()
 
     def run(self):
-        """Loop principal do jogo, responsável por atualizar e renderizar o jogo a cada frame."""
         while self.playing:
-            self.dt = self.clock.tick(FPS) / 1000.0  # Calcula delta time
-            self.events()                            # Processa eventos
+            self.dt = self.clock.tick(FPS) / 1000.0
+            self.events()
             if not self.playing:
                 break
-            self.update()                            # Atualiza estado do jogo
-            self.draw()                              # Renderiza frame
+            self.update()
+            self.draw()
 
     def events(self):
-        """Processa eventos do Pygame, como fechar a janela."""
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_TAB]:
+            print("[DEBUG] TAB key detected via get_pressed()")
+        
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.playing = False
                 self.running = False
+            elif event.type == pygame.KEYDOWN:
+                print(f"[DEBUG] Tecla pressionada: {pygame.key.name(event.key)}")
+                if event.key == pygame.K_TAB:
+                    print("[DEBUG] Tecla TAB pressionada!")
+                    # Check if mission journal is open - if so, let it handle TAB navigation
+                    if hasattr(self, 'mission_journal') and self.mission_journal.visible:
+                        print("[DEBUG] Journal de missões está aberto, TAB será usado para navegação")
+                        # Let mission journal handle the TAB key
+                        pass
+                    elif hasattr(self, 'inventory_ui'):
+                        print(f"[DEBUG] Inventário existe, visível: {self.inventory_ui.visible}")
+                        self.inventory_ui.visible = not self.inventory_ui.visible
+                        print(f"[DEBUG] Inventário agora visível: {self.inventory_ui.visible}")
+                        continue  # Skip inventory input handling for this event
+                    else:
+                        print("[DEBUG] Inventário UI não existe!")
+                elif event.key == pygame.K_i:  # Alternative key for inventory
+                    print("[DEBUG] Tecla I pressionada (alternativa para inventário)!")
+                    if hasattr(self, 'inventory_ui'):
+                        print(f"[DEBUG] Inventário existe, visível: {self.inventory_ui.visible}")
+                        self.inventory_ui.visible = not self.inventory_ui.visible
+                        print(f"[DEBUG] Inventário agora visível: {self.inventory_ui.visible}")
+                        continue  # Skip inventory input handling for this event
+
+            # Handle mission journal input first (higher priority)
+            if hasattr(self, 'mission_journal'):
+                self.mission_journal.handle_input(event)
+
+            # Handle inventory input only if it's not a TAB key event and journal is not visible
+            journal_is_visible = hasattr(self, 'mission_journal') and self.mission_journal.visible
+            if (hasattr(self, 'inventory_ui') and 
+                not (event.type == pygame.KEYDOWN and event.key == pygame.K_TAB) and
+                not journal_is_visible):
+                self.inventory_ui.handle_input(event)
 
     def update(self):
-        """Atualiza o estado do jogo, incluindo física, colisões e lógica."""
         if not self.camera or not self.player:
             self.playing = False
             return
 
-        # Atualiza câmera e todos os sprites
         self.camera.update(self.player)
         self.all_sprites.update(self.dt)
 
-        # Verifica colisões entre jogador e inimigos
         hits = pygame.sprite.spritecollide(self.player, self.enemies, False)
         for enemy in hits:
-            # Chama o método de ataque do inimigo
+
             if hasattr(enemy, 'attack'):
                 enemy.attack()
-            # Se não tiver o método attack, usa a lógica antiga como fallback
+
             elif hasattr(enemy, 'damage') and not self.player.invincible:
                 self.player.take_damage(enemy.damage)
-                # Adiciona um pequeno recuo para evitar dano contínuo em contato
+
                 push_direction = self.player.position - enemy.position
                 if push_direction.length() > 0:
                     push_direction = push_direction.normalize() * 5
                     self.player.position += push_direction
 
-        # Verifica zonas radioativas
         self.check_radioactive_zones()
 
-        # Emite partículas de radiação se o jogador estiver em zona radioativa
         if getattr(self.player, 'is_in_radioactive_zone', False):
             cx, cy = self.player.rect.center
             self.particle_systems.radiation.emit(cx, cy, count=5)
 
-        # Atualiza sistema de partículas
         self.particle_systems.radiation.update(self.dt)
 
-        # Verifica morte do jogador
         if self.player.health <= 0:
             self.playing = False
             if not self.cause_of_death:
                 self.cause_of_death = "Eliminado"
 
     def check_radioactive_zones(self):
-        """Verifica se o jogador está em uma zona radioativa."""
         if not self.player or not self.radioactive_zones:
             return
         in_zone = pygame.sprite.spritecollide(self.player, self.radioactive_zones, False)
         self.player.is_in_radioactive_zone = bool(in_zone)
 
     def draw(self):
-        """Renderiza todos os elementos do jogo na tela."""
         if not self.camera:
             self.screen.fill(BLACK)
             pygame.display.flip()
             return
 
-        # Limpa tela
         self.screen.fill(BLACK)
 
-        # Renderiza tiles do mundo
         for tile in self.world_tiles:
             if self.camera.is_rect_visible(tile.rect):
                 self.screen.blit(tile.image, self.camera.apply(tile))
-        
-        # Renderiza itens
+
         for item in self.items:
             if self.camera.is_rect_visible(item.rect):
                 self.screen.blit(item.image, self.camera.apply(item))
 
-        # Renderiza todos os sprites
         for sprite in self.all_sprites:
             if self.camera.is_rect_visible(sprite.rect) and hasattr(sprite, 'image'):
                 self.screen.blit(sprite.image, self.camera.apply(sprite))
 
-        # Renderiza jogador e sua arma
         if self.player and hasattr(self.player, 'image'):
             self.screen.blit(self.player.image, self.camera.apply(self.player))
             if hasattr(self.player, 'draw_weapon'):
                 self.player.draw_weapon(self.screen, self.camera)
 
-        # Renderiza inimigos
         for enemy in self.enemies:
             if self.camera.is_rect_visible(enemy.rect):
                 enemy.draw(self.screen, self.camera)
 
-        # Renderiza partículas de radiação
         self.particle_systems.radiation.draw(self.screen, self.camera)
 
-        # Renderiza HUD
         draw_hud(self)
+
+        if hasattr(self, 'mission_ui'):
+            self.mission_ui.draw(self.screen)
+
+        if hasattr(self, 'mission_journal'):
+            self.mission_journal.draw(self.screen)
+
+        if hasattr(self, 'inventory_ui'):
+            print("[DEBUG] Tentando desenhar inventário...")
+            self.inventory_ui.draw(self.screen)
+            print(f"[DEBUG] Estado do inventário: visible={self.inventory_ui.visible}")
+
         pygame.display.flip()
 
     def quit(self):
-        """Encerra o jogo e libera recursos."""
         pygame.quit()
         sys.exit()
 
     def play_audio(self, key, volume=1.0, loop=False):
-        """Reproduz um efeito sonoro ou música.
-        Args:
-            key (str): Chave do áudio a ser reproduzido.
-            volume (float): Volume do áudio (0.0 a 1.0).
-            loop (bool): Se True, o áudio será reproduzido em loop.
-        Returns:
-            pygame.mixer.Sound: O objeto de som reproduzido ou None se falhar.
-        """
         if self.audio_manager:
             return self.audio_manager.play(key, volume, loop)
         return None
 
     def stop_audio(self, sound=None, fadeout_ms=500):
-        """Para a reprodução de um som específico ou todos os sons.
-        Args:
-            sound (pygame.mixer.Sound, optional): Som a ser parado. Se None, para todos.
-            fadeout_ms (int): Tempo de fade out em milissegundos.
-        """
         if self.audio_manager:
             self.audio_manager.stop(sound, fadeout_ms)
 
     def stop_music(self, fadeout_ms=500):
-        """Para a música atual com fade out.
-        Args:
-            fadeout_ms (int): Tempo de fade out em milissegundos.
-        """
         if self.audio_manager:
             self.audio_manager.stop_music(fadeout_ms)

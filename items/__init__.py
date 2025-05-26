@@ -1,7 +1,4 @@
-# Pacote de itens
-from .item import Item
-from .health_pack import HealthPack
-from .ammo import Ammo
+from .item_base import Item, AmmoItem, MaskItem, HealthPackItem, FilterModuleItem
 from .weapons import Pistol
-from .filter_module import FilterModule
-from .reinforced_mask import ReinforcedMask
+
+__all__ = ['Item', 'AmmoItem', 'MaskItem', 'HealthPackItem', 'FilterModuleItem', 'Pistol']

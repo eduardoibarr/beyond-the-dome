@@ -21,19 +21,7 @@ from core.settings import (
 from core.settings import PLAYER_HEALTH, RADIATION_MAX, PISTOL_MAGAZINE_SIZE, GREEN, RED, YELLOW, WHITE, CYAN, LIGHTGREY
 import math
 
-
 def draw_hud(game):
-    """Desenha o Heads-Up Display (HUD) do jogo.
-    
-    O HUD inclui:
-    - Barra de vida do jogador
-    - Barra de radiação
-    - Indicador do módulo de filtro
-    - Contador de munição da pistola
-    
-    Args:
-        game: Referência ao objeto principal do jogo
-    """
     screen = game.screen
     player = game.player
     font = game.font
@@ -41,9 +29,8 @@ def draw_hud(game):
     border_radius = 8
     border_thickness = 1
 
-    # --- Barra de Vida ---
     if hasattr(player, 'health'):
-        # Calcula a porcentagem de vida atual
+
         health_pct = max(0, player.health / PLAYER_HEALTH)
         bar_width = HEALTH_BAR_WIDTH
         bar_height = HEALTH_BAR_HEIGHT
@@ -51,7 +38,6 @@ def draw_hud(game):
         bar_y = HEALTH_BAR_Y
         fill_width = int(bar_width * health_pct)
 
-        # Interpola a cor da barra baseado na vida atual
         color_r = int(HEALTH_BAR_COLOR_MIN[0] + (HEALTH_BAR_COLOR_MAX[0] - HEALTH_BAR_COLOR_MIN[0]) * health_pct)
         color_g = int(HEALTH_BAR_COLOR_MIN[1] + (HEALTH_BAR_COLOR_MAX[1] - HEALTH_BAR_COLOR_MIN[1]) * health_pct)
         color_b = int(HEALTH_BAR_COLOR_MIN[2] + (HEALTH_BAR_COLOR_MAX[2] - HEALTH_BAR_COLOR_MIN[2]) * health_pct)
@@ -62,18 +48,15 @@ def draw_hud(game):
             max(0, min(255, color_b - 20))
         )
 
-        # Renderiza o fundo da barra
         bg_surface = pygame.Surface((bar_width, bar_height), pygame.SRCALPHA)
         pygame.draw.rect(bg_surface, (*HEALTH_BAR_BACKGROUND_COLOR, 180), bg_surface.get_rect(),
                          border_radius=border_radius)
         screen.blit(bg_surface, (bar_x, bar_y))
 
-        # Renderiza o preenchimento com gradiente
         if fill_width > 0:
             fill_rect = pygame.Rect(bar_x, bar_y, fill_width, bar_height)
             gradient_surf = pygame.Surface((fill_width, bar_height), pygame.SRCALPHA)
-            
-            # Aplica o gradiente de cor
+
             for x in range(fill_width):
                 grad_factor = x / fill_width
                 r = int(current_health_color[0] + (fill_color_end[0] - current_health_color[0]) * grad_factor)
@@ -82,14 +65,12 @@ def draw_hud(game):
                 color = (r, g, b)
                 pygame.draw.line(gradient_surf, color, (x, 0), (x, bar_height))
 
-            # Aplica máscara arredondada
             mask_surf = pygame.Surface((fill_width, bar_height), pygame.SRCALPHA)
             pygame.draw.rect(mask_surf, (255, 255, 255), mask_surf.get_rect(),
                              border_radius=border_radius)
             gradient_surf.blit(mask_surf, (0, 0), special_flags=pygame.BLEND_RGBA_MIN)
             screen.blit(gradient_surf, (bar_x, bar_y))
 
-        # Renderiza a borda e destaque
         border_rect = pygame.Rect(bar_x, bar_y, bar_width, bar_height)
         pygame.draw.rect(screen, (*HEALTH_BAR_BORDER_COLOR, 180), border_rect, border_thickness,
                          border_radius=border_radius)
@@ -102,7 +83,6 @@ def draw_hud(game):
                          border_radius=border_radius - 1)
         screen.blit(highlight_surface, highlight_rect)
 
-        # Renderiza o texto da vida
         health_text = f"Vida: {int(player.health)}%"
         shadow_surface = font.render(health_text, True, (0, 0, 0, 120))
         text_x = bar_x + bar_width + 10
@@ -111,9 +91,8 @@ def draw_hud(game):
         health_text_surface = font.render(health_text, True, HUD_COLOR)
         screen.blit(health_text_surface, (text_x, text_y))
 
-    # --- Barra de Radiação ---
     if hasattr(player, 'radiation'):
-        # Calcula a porcentagem de radiação atual
+
         radiation_pct = max(0, min(1, player.radiation / RADIATION_MAX))
         rad_bar_x = RADIATION_BAR_X
         rad_bar_y = RADIATION_BAR_Y
@@ -121,7 +100,6 @@ def draw_hud(game):
         rad_bar_height = RADIATION_BAR_HEIGHT
         rad_fill_width = int(rad_bar_width * radiation_pct)
 
-        # Interpola a cor da barra baseado na radiação atual
         rad_color_r = int(RADIATION_BAR_COLOR_MIN[0] + (RADIATION_BAR_COLOR_MAX[0] - RADIATION_BAR_COLOR_MIN[0]) * radiation_pct)
         rad_color_g = int(RADIATION_BAR_COLOR_MIN[1] + (RADIATION_BAR_COLOR_MAX[1] - RADIATION_BAR_COLOR_MIN[1]) * radiation_pct)
         rad_color_b = int(RADIATION_BAR_COLOR_MIN[2] + (RADIATION_BAR_COLOR_MAX[2] - RADIATION_BAR_COLOR_MIN[2]) * radiation_pct)
@@ -130,18 +108,15 @@ def draw_hud(game):
         rad_color_end = (max(0, min(255, rad_color_r - 30)), max(0, min(255, rad_color_g - 30)),
                          max(0, min(255, rad_color_b - 30)))
 
-        # Renderiza o fundo da barra
         rad_bg_surface = pygame.Surface((rad_bar_width, rad_bar_height), pygame.SRCALPHA)
         pygame.draw.rect(rad_bg_surface, (*RADIATION_BAR_BACKGROUND_COLOR, 180), rad_bg_surface.get_rect(),
                          border_radius=border_radius)
         screen.blit(rad_bg_surface, (rad_bar_x, rad_bar_y))
 
-        # Renderiza o preenchimento com gradiente e efeito de pulsação
         if rad_fill_width > 0:
             rad_fill_rect = pygame.Rect(rad_bar_x, rad_bar_y, rad_fill_width, rad_bar_height)
             rad_gradient_surf = pygame.Surface((rad_fill_width, rad_bar_height), pygame.SRCALPHA)
-            
-            # Aplica o gradiente de cor
+
             for x in range(rad_fill_width):
                 grad_factor = x / rad_fill_width
                 r = int(current_rad_color[0] + (rad_color_end[0] - current_rad_color[0]) * grad_factor)
@@ -149,20 +124,17 @@ def draw_hud(game):
                 b = int(current_rad_color[2] + (rad_color_end[2] - current_rad_color[2]) * grad_factor)
                 color = (r, g, b)
                 pygame.draw.line(rad_gradient_surf, color, (x, 0), (x, rad_bar_height))
-            
-            # Aplica efeito de pulsação quando a radiação está alta
+
             if radiation_pct > 0.75:
                 pulse_factor = (math.sin(pygame.time.get_ticks() * 0.01) * 0.2) + 0.8
                 rad_gradient_surf.set_alpha(int(255 * pulse_factor))
-            
-            # Aplica máscara arredondada
+
             rad_mask_surf = pygame.Surface((rad_fill_width, rad_bar_height), pygame.SRCALPHA)
             pygame.draw.rect(rad_mask_surf, (255, 255, 255), rad_mask_surf.get_rect(),
                              border_radius=border_radius)
             rad_gradient_surf.blit(rad_mask_surf, (0, 0), special_flags=pygame.BLEND_RGBA_MIN)
             screen.blit(rad_gradient_surf, (rad_bar_x, rad_bar_y))
 
-        # Renderiza a borda e destaque
         rad_border_rect = pygame.Rect(rad_bar_x, rad_bar_y, rad_bar_width, rad_bar_height)
         pygame.draw.rect(screen, (*RADIATION_BAR_BORDER_COLOR, 180), rad_border_rect, border_thickness,
                          border_radius=border_radius)
@@ -175,7 +147,6 @@ def draw_hud(game):
                          border_radius=border_radius - 1)
         screen.blit(rad_highlight_surface, rad_highlight_rect)
 
-        # Renderiza o texto da radiação
         radiation_text = f"Rad: {int(player.radiation)}%"
         rad_shadow_surface = font.render(radiation_text, True, (0, 0, 0, 120))
         rad_text_x = rad_bar_x + rad_bar_width + 10
@@ -184,9 +155,8 @@ def draw_hud(game):
         radiation_text_surface = font.render(radiation_text, True, HUD_COLOR)
         screen.blit(radiation_text_surface, (rad_text_x, rad_text_y))
 
-    # --- Contador de Munição ---
     if hasattr(player, 'pistol') and hasattr(player.pistol, 'ammo_in_mag') and hasattr(player, 'reserve_ammo'):
-        # Define o texto e cor baseado no estado da munição
+
         ammo_text = f"{player.pistol.ammo_in_mag} / {player.reserve_ammo}"
         ammo_color = WHITE
         if player.pistol.reloading:
@@ -195,12 +165,10 @@ def draw_hud(game):
         elif player.pistol.ammo_in_mag <= PISTOL_MAGAZINE_SIZE * 0.2:
             ammo_color = RED
 
-        # Renderiza o texto da munição
         ammo_surface = font.render(ammo_text, True, ammo_color)
         ammo_rect = ammo_surface.get_rect(bottomright=(game.screen.get_width() - 15,
                                                         game.screen.get_height() - 15))
 
-        # Renderiza o fundo do contador
         padding = 8
         ammo_bg_rect = pygame.Rect(ammo_rect.left - padding, ammo_rect.top - padding,
                                    ammo_rect.width + padding * 2, ammo_rect.height + padding * 2)
@@ -209,63 +177,52 @@ def draw_hud(game):
                          border_radius=5)
         screen.blit(ammo_bg_surface, ammo_bg_rect.topleft)
 
-        # Renderiza o texto com sombra
         ammo_shadow = font.render(ammo_text, True, (0, 0, 0, 150))
         screen.blit(ammo_shadow, (ammo_rect.x + shadow_offset, ammo_rect.y + shadow_offset))
         screen.blit(ammo_surface, ammo_rect)
-        
-    # --- Indicador de Máscara Reforçada ---
+
     if hasattr(player, 'mask_buff_active') and hasattr(player, 'mask_buff_timer'):
-        # Posicionamento
+
         mask_indicator_x = rad_bar_x
         mask_indicator_y = (rad_bar_y + rad_bar_height + 40)
-        
-        # Define a cor e texto com base no status do buff
+
         if player.mask_buff_active:
-            # Calcula o tempo restante arredondado para cima
+
             remaining_time = math.ceil(player.mask_buff_timer)
             mask_text_str = f"Máscara Reforçada: {remaining_time}s"
             mask_color = CYAN
-            
-            # Efeito de pulso para destacar
+
             pulse_factor = (math.sin(pygame.time.get_ticks() * 0.01) * 0.2) + 0.8
             alpha = int(255 * pulse_factor)
         else:
             mask_text_str = "Máscara Reforçada: INATIVA"
             mask_color = LIGHTGREY
             alpha = 200
-        
-        # Renderiza o texto da máscara com sombra
+
         shadow_mask = font.render(mask_text_str, True, (0, 0, 0, 150))
         mask_text = font.render(mask_text_str, True, mask_color)
         mask_text.set_alpha(alpha)
-        
-        # Cria retângulo de fundo
+
         mask_rect = mask_text.get_rect(topleft=(mask_indicator_x, mask_indicator_y))
         padding = 6
         mask_bg_rect = pygame.Rect(mask_rect.left - padding, mask_rect.top - padding,
                                   mask_rect.width + padding * 2, mask_rect.height + padding * 2)
         mask_bg_surface = pygame.Surface(mask_bg_rect.size, pygame.SRCALPHA)
-        
-        # Aplica cor de fundo diferente quando ativo
+
         bg_color = (0, 50, 80, 100) if player.mask_buff_active else (0, 0, 0, 100)
         pygame.draw.rect(mask_bg_surface, bg_color, mask_bg_surface.get_rect(), border_radius=5)
-        
-        # Renderiza
+
         screen.blit(mask_bg_surface, mask_bg_rect.topleft)
         screen.blit(shadow_mask, (mask_rect.x + shadow_offset, mask_rect.y + shadow_offset))
         screen.blit(mask_text, mask_rect)
-        
-        # Renderiza barra de progresso do tempo restante se estiver ativo
+
         if player.mask_buff_active:
             progress_height = 4
             progress_width = mask_rect.width
             progress_rect = pygame.Rect(mask_rect.x, mask_rect.bottom + 2, progress_width, progress_height)
-            
-            # Fundo da barra
+
             pygame.draw.rect(screen, (50, 50, 50, 150), progress_rect, border_radius=2)
-            
-            # Preenchimento da barra (baseado no tempo restante)
+
             from core.settings import REINFORCED_MASK_DURATION
             fill_width = int(progress_width * (player.mask_buff_timer / REINFORCED_MASK_DURATION))
             if fill_width > 0:
