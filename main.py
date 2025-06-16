@@ -16,16 +16,12 @@ def integrate_enhanced_systems(game):
     original_new = game.new
     original_update = game.update
     original_draw = game.draw
-
     def enhanced_new():
         result = original_new()
 
-        if hasattr(game, 'mission_system') and game.mission_system:
-            if game.mission_system.start_mission("tutorial"):
-                if hasattr(game, 'mission_ui'):
-                    game.mission_ui.set_visible(True)
-            else:
-                print("[DEBUG] Falha ao iniciar missão tutorial!")
+        # Os sistemas de missão já foram inicializados e a missão tutorial já foi iniciada automaticamente
+        if hasattr(game, 'mission_ui'):
+            game.mission_ui.set_visible(True)
 
         if hasattr(game, 'enemies'):
             for enemy in game.enemies:

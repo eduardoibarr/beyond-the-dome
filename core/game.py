@@ -5,7 +5,8 @@ from .settings import (
     WIDTH, HEIGHT, TITLE, FPS,
     HUD_FONT_SIZE, INTRO_TITLE_FONT_SIZE, INTRO_FONT_SIZE,
     PROMPT_FONT_SIZE, GAME_OVER_FONT_SIZE,
-    BLACK, TILE_SIZE, MAP_WIDTH, MAP_HEIGHT
+    BLACK, TILE_SIZE, MAP_WIDTH, MAP_HEIGHT,
+    MINIMAP_SIZE, MINIMAP_MARGIN
 )
 from .audio_manager import AudioManager
 from .spawner import spawn_initial_enemies
@@ -17,6 +18,7 @@ from level.generator import LevelGenerator
 from graphics.camera import Camera
 from graphics.ui.hud import draw_hud
 from graphics.ui.screens import display_intro
+from graphics.ui.minimap import MiniMap
 from core.inventory import InventoryUI
 
 class Game:
@@ -62,6 +64,9 @@ class Game:
             persistence=0.5,
             lacunarity=2.0
         )
+        
+        # Mini mapa
+        self.minimap = None
 
     def load_fonts(self):
         try:
@@ -102,6 +107,12 @@ class Game:
         self.player = PlayerClass(self, spawn_x * TILE_SIZE, spawn_y * TILE_SIZE)
 
         self.inventory_ui = InventoryUI(self, self.player.inventory)
+        
+        # Inicializa o mini mapa
+        # Posição no canto inferior esquerdo
+        minimap_x = MINIMAP_MARGIN
+        minimap_y = HEIGHT - MINIMAP_SIZE - MINIMAP_MARGIN
+        self.minimap = MiniMap(self, position=(minimap_x, minimap_y))
 
         spawn_initial_enemies(self, self.asset_manager)
         self.cause_of_death = None
@@ -139,6 +150,15 @@ class Game:
                     if hasattr(self, 'inventory_ui'):
                         self.inventory_ui.visible = not self.inventory_ui.visible
                         continue
+                elif event.key == pygame.K_m:
+                    # Toggle do fog of war no mini mapa
+                    if hasattr(self, 'minimap') and self.minimap:
+                        self.minimap.toggle_fog_of_war()
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1:  # Clique esquerdo
+                    # Verifica se clicou no mini mapa
+                    if hasattr(self, 'minimap') and self.minimap:
+                        self.minimap.handle_click(event.pos)
 
             if hasattr(self, 'mission_journal'):
                 self.mission_journal.handle_input(event)
@@ -209,11 +229,8 @@ class Game:
         for sprite in self.all_sprites:
             if self.camera.is_rect_visible(sprite.rect) and hasattr(sprite, 'image'):
                 self.screen.blit(sprite.image, self.camera.apply(sprite))
-
-        if self.player and hasattr(self.player, 'image'):
-            self.screen.blit(self.player.image, self.camera.apply(self.player))
-            if hasattr(self.player, 'draw_weapon'):
-                self.player.draw_weapon(self.screen, self.camera)
+            if self.player and hasattr(self.player, 'image'):
+                self.screen.blit(self.player.image, self.camera.apply(self.player))
 
         for enemy in self.enemies:
             if self.camera.is_rect_visible(enemy.rect):
@@ -231,6 +248,15 @@ class Game:
 
         if hasattr(self, 'inventory_ui'):
             self.inventory_ui.draw(self.screen)
+        
+        # Desenha o mini mapa
+        if hasattr(self, 'minimap') and self.minimap:
+            self.minimap.draw(self.screen)
+        
+
+        # Desenhar cursor/mira por último para ficar na frente de tudo
+        if self.player and hasattr(self.player, 'draw_weapon'):
+            self.player.draw_weapon(self.screen, self.camera)
 
         pygame.display.flip()
 

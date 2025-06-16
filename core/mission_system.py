@@ -105,6 +105,11 @@ class MissionSystem:
         }
 
         self._load_missions()
+        
+        # Inicia automaticamente a missão tutorial se não há missões ativas
+        if not self.active_missions and 'tutorial' not in self.completed_missions:
+            print("[DEBUG] Iniciando missão tutorial automaticamente")
+            self.start_mission("tutorial")
 
     def _load_missions(self):
         tutorial_objectives = [
@@ -174,23 +179,29 @@ class MissionSystem:
 
         for mission in [tutorial_mission, supply_mission, combat_mission, exploration_mission, truth_mission]:
             self.missions[mission.id] = mission
-
+            
+            
     def start_mission(self, mission_id: str) -> bool:
         if mission_id not in self.missions:
+            print(f"[DEBUG] Missão {mission_id} não encontrada!")
             return False
 
         mission = self.missions[mission_id]
         if mission.status != MissionStatus.NOT_STARTED:
+            print(f"[DEBUG] Missão {mission_id} já foi iniciada (status: {mission.status})")
             return False
 
         if mission.start():
             if mission_id not in self.active_missions:
                 self.active_missions.append(mission_id)
+                print(f"[DEBUG] Missão {mission_id} iniciada com sucesso!")
 
             for callback in self.mission_callbacks['mission_started']:
                 callback(mission)
 
             return True
+        
+        print(f"[DEBUG] Falha ao iniciar missão {mission_id}")
         return False
 
     def complete_mission(self, mission_id: str):
@@ -238,19 +249,28 @@ class MissionSystem:
                             callback(mission, objective)
 
                     if mission.update_objective(objective.id, 0):
-                        self.complete_mission(mission_id)
-
+                        self.complete_mission(mission_id)    
+                        
     def get_active_missions(self) -> List[Mission]:
         missions = []
-        for mid in self.active_missions[:]:
+        # Cria uma cópia da lista para evitar modificação durante iteração
+        active_missions_copy = self.active_missions.copy()
+        
+        for mid in active_missions_copy:
             if mid in self.missions:
                 mission = self.missions[mid]
                 if mission.status == MissionStatus.ACTIVE:
                     missions.append(mission)
                 elif mission.status in [MissionStatus.COMPLETED, MissionStatus.FAILED]:
-                    self.active_missions.remove(mid)
+                    # Remove missões que não estão mais ativas
+                    if mid in self.active_missions:
+                        self.active_missions.remove(mid)
             else:
-                self.active_missions.remove(mid)
+                # Remove IDs de missões que não existem mais
+                if mid in self.active_missions:
+                    self.active_missions.remove(mid)
+        
+        print(f"[DEBUG] get_active_missions retornando {len(missions)} missões")
         return missions
 
     def get_mission(self, mission_id: str) -> Optional[Mission]:

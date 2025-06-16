@@ -67,32 +67,32 @@ class MissionUI:
         if self.notification_timer > 0 and pygame.time.get_ticks() > self.notification_timer:
             self.notification_timer = 0
             self.notification_text = ""
-
+            
     def draw(self, screen):
         if not self.visible:
             return
         
         active_missions = self.mission_system.get_active_missions()
         
+        # Se não há missões ativas mas existe a missão tutorial não iniciada, force a inicialização
         if not active_missions and 'tutorial' in self.mission_system.missions:
             tutorial_mission = self.mission_system.missions['tutorial']
-            active_missions = [tutorial_mission]
+            if tutorial_mission.status == MissionStatus.NOT_STARTED:
+                print("[DEBUG] Forçando início da missão tutorial via UI")
+                self.mission_system.start_mission("tutorial")
+                active_missions = self.mission_system.get_active_missions()
         
-        if self.mission_system.active_missions or active_missions:
-            missions_to_show = active_missions if active_missions else []
-            if not missions_to_show and self.mission_system.active_missions:
-                missions_to_show = []
-                for mid in self.mission_system.active_missions:
-                    if mid in self.mission_system.missions:
-                        missions_to_show.append(self.mission_system.missions[mid])
-            
-            if missions_to_show:
-                self._draw_panel(screen, missions_to_show)
-            else:
-                print("[DEBUG] Nenhuma missão para mostrar após verificação")
+        # Exibe as missões ativas
+        if active_missions:
+            self._draw_panel(screen, active_missions)
+            print(f"[DEBUG] Exibindo {len(active_missions)} missões ativas")
         else:
-            print("[DEBUG] Nenhuma missão ativa para mostrar")
+            # Debug: mostra status das missões
+            print(f"[DEBUG] Nenhuma missão ativa. Status das missões:")
+            for mid, mission in self.mission_system.missions.items():
+                print(f"  {mid}: {mission.status.value}")
         
+        # Exibe notificações se houver
         if self.notification_text and self.visible:
             self._draw_notifications(screen)
 
