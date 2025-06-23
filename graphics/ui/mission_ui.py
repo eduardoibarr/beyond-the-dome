@@ -31,6 +31,10 @@ class MissionUI:
         self.notification_text = ""
         self.notification_color = WHITE
 
+        # Track mission count to avoid debug spam
+        self.last_mission_count = 0
+        self.debug_cooldown = 0
+
         self.mission_system.register_callback('mission_started', self._on_mission_started)
         self.mission_system.register_callback('mission_completed', self._on_mission_completed)
         self.mission_system.register_callback('objective_completed', self._on_objective_completed)
@@ -61,18 +65,22 @@ class MissionUI:
             self.panel_height = 400
         else:
             self.panel_height = 200
-
+            
     def update(self, dt):
-
         if self.notification_timer > 0 and pygame.time.get_ticks() > self.notification_timer:
             self.notification_timer = 0
             self.notification_text = ""
-            
+        
+        # Update debug cooldown
+        if self.debug_cooldown > 0:
+            self.debug_cooldown -= dt
+
     def draw(self, screen):
         if not self.visible:
             return
         
         active_missions = self.mission_system.get_active_missions()
+        current_mission_count = len(active_missions)
         
         # Se não há missões ativas mas existe a missão tutorial não iniciada, force a inicialização
         if not active_missions and 'tutorial' in self.mission_system.missions:
@@ -81,16 +89,21 @@ class MissionUI:
                 print("[DEBUG] Forçando início da missão tutorial via UI")
                 self.mission_system.start_mission("tutorial")
                 active_missions = self.mission_system.get_active_missions()
+                current_mission_count = len(active_missions)
+        
+        # Only print debug info when mission count changes or on cooldown
+        if (current_mission_count != self.last_mission_count or self.debug_cooldown <= 0):
+            if current_mission_count > 0:
+                print(f"[DEBUG] Exibindo {current_mission_count} missões ativas")
+            else:
+                print(f"[DEBUG] Nenhuma missão ativa")
+            
+            self.last_mission_count = current_mission_count
+            self.debug_cooldown = 1000  # 1 second cooldown
         
         # Exibe as missões ativas
         if active_missions:
             self._draw_panel(screen, active_missions)
-            print(f"[DEBUG] Exibindo {len(active_missions)} missões ativas")
-        else:
-            # Debug: mostra status das missões
-            print(f"[DEBUG] Nenhuma missão ativa. Status das missões:")
-            for mid, mission in self.mission_system.missions.items():
-                print(f"  {mid}: {mission.status.value}")
         
         # Exibe notificações se houver
         if self.notification_text and self.visible:

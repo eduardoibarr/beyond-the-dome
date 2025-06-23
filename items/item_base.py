@@ -47,11 +47,49 @@ class AmmoItem(Item):
         super().__init__(
             name=f"Munição de {ammo_type.title()}",
             description=f"Um pente com {ammo_count} balas",
-            icon_path="assets/images/tds-modern-hero-weapons-and-props/Ammo/Ammo.png",
+            icon_path="assets/images/tds-modern-hero-weapons-and-props/Props/Ammo/Ammo.png",
             stackable=True,
             max_stack=10
         )
         self.ammo_type = ammo_type
+        self.ammo_count = ammo_count
+
+    def use(self, player):
+        if hasattr(player, 'reserve_ammo'):
+            player.reserve_ammo += self.ammo_count
+            self.quantity -= 1
+            print(f"Adicionadas {self.ammo_count} balas à reserva")
+            return True
+        return False
+
+class AmmoBoxItem(Item):
+    def __init__(self, ammo_count=60):
+        super().__init__(
+            name="Caixa de Munição",
+            description=f"Uma caixa grande com {ammo_count} balas",
+            icon_path="assets/images/tds-modern-hero-weapons-and-props/Props/Ammo/Ammo Box.png",
+            stackable=True,
+            max_stack=5
+        )
+        self.ammo_count = ammo_count
+
+    def use(self, player):
+        if hasattr(player, 'reserve_ammo'):
+            player.reserve_ammo += self.ammo_count
+            self.quantity -= 1
+            print(f"Adicionadas {self.ammo_count} balas à reserva")
+            return True
+        return False
+
+class ArmyBoxItem(Item):
+    def __init__(self, ammo_count=120):
+        super().__init__(
+            name="Caixa Militar",
+            description=f"Uma caixa militar com {ammo_count} balas",
+            icon_path="assets/images/tds-modern-hero-weapons-and-props/Props/Ammo/Army Box.png",
+            stackable=True,
+            max_stack=3
+        )
         self.ammo_count = ammo_count
 
     def use(self, player):
@@ -67,7 +105,7 @@ class MaskItem(Item):
         super().__init__(
             name="Máscara Reforçada",
             description="Protege contra radiação por 30 segundos",
-            icon_path="assets/images/tds-modern-hero-weapons-and-props/Props/Mask.png",
+            icon_path="assets/images/tds-modern-hero-weapons-and-props/Props/Armor/Armor.png",
             stackable=True,
             max_stack=5
         )
@@ -86,7 +124,7 @@ class HealthPackItem(Item):
         super().__init__(
             name="Kit Médico",
             description="Restaura 50 pontos de vida",
-            icon_path="assets/images/tds-modern-hero-weapons-and-props/Props/MedKit.png",
+            icon_path="assets/images/tds-modern-hero-weapons-and-props/Props/HP/HP.png",
             stackable=True,
             max_stack=10
         )
@@ -108,7 +146,7 @@ class FilterModuleItem(Item):
         super().__init__(
             name="Módulo de Filtro",
             description="Componente especial para melhorar a máscara",
-            icon_path="assets/images/tds-modern-hero-weapons-and-props/Props/Filter.png",
+            icon_path="assets/images/tds-modern-hero-weapons-and-props/Props/Speed/Iocn_Speed_01.png",
             stackable=True,
             max_stack=3
         )

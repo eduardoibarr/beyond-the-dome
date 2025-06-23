@@ -23,9 +23,6 @@ class WildDog(Enemy):
 
         self.ai_controller = EnhancedWildDogAI(self)
 
-        self.is_attacking = False
-        self.attack_timer = 0
-
         self._create_sprite()
 
     def _create_sprite(self):
@@ -37,9 +34,6 @@ class WildDog(Enemy):
 
                 death_frame = min(4, max(1, 4 - int((self.health / self.max_health) * 4)))
                 asset_path = soldier_base + f"Die/SD_{death_frame}.png"
-            elif self.is_attacking:
-
-                asset_path = soldier_base + "SoldierWaepon.png"
             else:
 
                 asset_path = soldier_base + "Soldier.png"
@@ -69,17 +63,7 @@ class WildDog(Enemy):
     def update(self, dt):
         super().update(dt)
 
-        if self.is_attacking:
-            self.attack_timer -= dt
-            if self.attack_timer <= 0:
-                self.is_attacking = False
-
-        self._create_sprite()
-
     def attack(self):
-
-        self.is_attacking = True
-        self.attack_timer = 0.3
 
         if hasattr(self.game, 'asset_manager'):
             self.game.asset_manager.play_sound('wild_dog_bite')

@@ -4,7 +4,6 @@ from core.settings import *
 from items.item_base import Item
 
 class Collectible(pygame.sprite.Sprite):
-
     def __init__(self, game, x, y, item):
         self.groups = game.all_sprites, game.items
         super().__init__(self.groups)
@@ -18,12 +17,14 @@ class Collectible(pygame.sprite.Sprite):
                     self.image = pygame.transform.scale(self.image, (ITEM_SIZE, ITEM_SIZE))
                 else:
                     raise Exception("Imagem não encontrada")
-            except:
-
+            except Exception as e:
+                print(f"Erro ao carregar imagem {item.icon_path}: {e}")
+                # Criar imagem placeholder colorida
                 self.image = pygame.Surface((ITEM_SIZE, ITEM_SIZE))
                 self.image.fill(ITEM_COLOR)
         else:
-
+            print(f"Item {item.name} não tem icon_path definido")
+            # Criar imagem placeholder colorida
             self.image = pygame.Surface((ITEM_SIZE, ITEM_SIZE))
             self.image.fill(ITEM_COLOR)
 

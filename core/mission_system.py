@@ -96,6 +96,9 @@ class MissionSystem:
         self.active_missions: List[str] = []
         self.completed_missions: List[str] = []
         self.failed_missions: List[str] = []
+        
+        # Rastreamento de objetivos já processados para evitar repetição
+        self.processed_reach_objectives = set()
 
         self.mission_callbacks: Dict[str, List[Callable]] = {
             'mission_started': [],
@@ -128,7 +131,7 @@ class MissionSystem:
         supply_objectives = [
             Objective("collect_filters", ObjectiveType.COLLECT, "Colete módulos de filtro", "filter_module", 5),
             Objective("collect_health", ObjectiveType.COLLECT, "Colete kits médicos", "health_pack", 3),
-            Objective("survive_radiation", ObjectiveType.SURVIVE, "Sobreviva em área radioativa", "radiation_zone", 60)
+            Objective("survive_radiation", ObjectiveType.SURVIVE, "Sobreviva em área radioativa por 60 segundos", "radiation_zone", 60)
         ]
         supply_mission = Mission(
             "supply_run",
@@ -203,23 +206,49 @@ class MissionSystem:
         
         print(f"[DEBUG] Falha ao iniciar missão {mission_id}")
         return False
-
+        
     def complete_mission(self, mission_id: str):
         if mission_id not in self.missions:
+            print(f"[DEBUG] Missão {mission_id} não encontrada para completar")
             return
 
         mission = self.missions[mission_id]
-        if mission.status != MissionStatus.COMPLETED:
-            return
-
+        print(f"[DEBUG] Completando missão {mission_id} com status: {mission.status}")
+        
+        # Garante que a missão seja marcada como concluída
+        mission.status = MissionStatus.COMPLETED
+        
         if mission_id in self.active_missions:
             self.active_missions.remove(mission_id)
-        self.completed_missions.append(mission_id)
+            print(f"[DEBUG] Removida missão {mission_id} das missões ativas")
+            
+        if mission_id not in self.completed_missions:
+            self.completed_missions.append(mission_id)
+            print(f"[DEBUG] Adicionada missão {mission_id} às missões concluídas")
 
         self._give_rewards(mission.rewards)
 
         for callback in self.mission_callbacks['mission_completed']:
             callback(mission)
+
+        print(f"[DEBUG] Buscando próxima missão para iniciar automaticamente...")
+        # Inicia automaticamente a próxima missão, se disponível
+        mission_order = ["tutorial", "supply_run", "raider_conflict", "industrial_exploration", "truth_revelation"]
+        current_index = mission_order.index(mission_id) if mission_id in mission_order else -1
+        
+        if current_index >= 0 and current_index < len(mission_order) - 1:
+            next_mission_id = mission_order[current_index + 1]
+            next_mission = self.missions.get(next_mission_id)
+            
+            if next_mission and next_mission.status == MissionStatus.NOT_STARTED:
+                print(f"[DEBUG] Tentando iniciar a próxima missão: {next_mission_id}")
+                started = self.start_mission(next_mission_id)
+                if started:
+                    print(f"[DEBUG] Próxima missão {next_mission_id} iniciada com sucesso!")
+                else:
+                    print(f"[DEBUG] Falha ao iniciar a próxima missão {next_mission_id}")
+        else:
+            print(f"[DEBUG] Não há mais missões disponíveis após {mission_id}")
 
     def fail_mission(self, mission_id: str):
         if mission_id not in self.missions:
@@ -234,23 +263,35 @@ class MissionSystem:
 
         for callback in self.mission_callbacks['mission_failed']:
             callback(mission)
-
     def update_objective(self, objective_type: ObjectiveType, target: str, amount: int = 1):
-        for mission_id in self.active_missions[:]:
+        print(f"[DEBUG] Atualizando objetivo: {objective_type.value}, target: {target}, amount: {amount}")
+
+        for mission_id in self.active_missions:
             mission = self.missions[mission_id]
-
             for objective in mission.objectives:
-                if objective.type == objective_type and objective.target == target and not objective.completed:
-                    was_completed = objective.completed
-                    objective.update_progress(amount)
+                if objective.type == objective_type and objective.target == target:
+                    # Evita atualizar repetidamente objetivos de "REACH" que já foram concluídos
+                    if objective.type == ObjectiveType.REACH and objective.completed:
+                        continue
+                        
+                    if objective.type == ObjectiveType.SURVIVE:
+                        # Atualiza o progresso em tempo real para objetivos de sobrevivência
+                        objective.update_progress(amount)
+                        print(f"[DEBUG] Sobrevivendo: {objective.current_count}/{objective.target_count} segundos")
+                    else:
+                        objective.update_progress(amount)
 
-                    if not was_completed and objective.completed:
+                    if objective.completed:
+                        print(f"[DEBUG] Objetivo {objective.id} concluído!")
                         for callback in self.mission_callbacks['objective_completed']:
                             callback(mission, objective)
-
-                    if mission.update_objective(objective.id, 0):
-                        self.complete_mission(mission_id)    
                         
+                        # Verifica se todos os objetivos da missão foram concluídos
+                        if all(obj.completed for obj in mission.objectives):
+                            print(f"[DEBUG] Missão {mission_id} concluída! Definindo status como COMPLETED...")
+                            mission.status = MissionStatus.COMPLETED
+                            self.complete_mission(mission_id)
+                    break
     def get_active_missions(self) -> List[Mission]:
         missions = []
         # Cria uma cópia da lista para evitar modificação durante iteração
@@ -270,7 +311,6 @@ class MissionSystem:
                 if mid in self.active_missions:
                     self.active_missions.remove(mid)
         
-        print(f"[DEBUG] get_active_missions retornando {len(missions)} missões")
         return missions
 
     def get_mission(self, mission_id: str) -> Optional[Mission]:

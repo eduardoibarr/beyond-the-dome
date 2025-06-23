@@ -222,15 +222,20 @@ class Game:
             if self.camera.is_rect_visible(tile.rect):
                 self.screen.blit(tile.image, self.camera.apply(tile))
 
+        for sprite in self.all_sprites:
+            if self.camera.is_rect_visible(sprite.rect) and hasattr(sprite, 'image'):
+                # Não desenhar itens coletáveis aqui, pois serão desenhados depois
+                if not hasattr(sprite, 'item'):
+                    self.screen.blit(sprite.image, self.camera.apply(sprite))
+
+        # Desenhar o player
+        if self.player and hasattr(self.player, 'image'):
+            self.screen.blit(self.player.image, self.camera.apply(self.player))
+
+        # Desenhar itens coletáveis por último para garantir que apareçam por cima
         for item in self.items:
             if self.camera.is_rect_visible(item.rect):
                 self.screen.blit(item.image, self.camera.apply(item))
-
-        for sprite in self.all_sprites:
-            if self.camera.is_rect_visible(sprite.rect) and hasattr(sprite, 'image'):
-                self.screen.blit(sprite.image, self.camera.apply(sprite))
-            if self.player and hasattr(self.player, 'image'):
-                self.screen.blit(self.player.image, self.camera.apply(self.player))
 
         for enemy in self.enemies:
             if self.camera.is_rect_visible(enemy.rect):

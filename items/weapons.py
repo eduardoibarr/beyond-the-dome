@@ -1,6 +1,6 @@
 import pygame
 from core.settings import *
-from projectiles.projectiles import Bullet, Casing
+from projectiles.projectiles import Bullet, Casing, Rocket
 
 vec = pygame.math.Vector2
 
@@ -55,7 +55,7 @@ class Pistol(Weapon):
         self.ammo_in_mag += transferred_ammo
         self.reloading = False
         self.game.play_audio('reload_end', volume=0.7)
-
+        
     def shoot(self, direction):
         if not self.can_shoot():
             if not self.reloading and self.ammo_in_mag <= 0:
@@ -74,16 +74,18 @@ class Pistol(Weapon):
         offset_dist = self.player.rect.width / 2 + BULLET_WIDTH / 2
         spawn_pos = self.player.position + direction * offset_dist
 
-        Bullet(self.game, spawn_pos, direction, BULLET_SPEED)
+        # Criar bala com tipo específico
+        Bullet(self.game, spawn_pos, direction, BULLET_SPEED, bullet_type="pistol")
         self.game.play_audio('beretta-m9', volume=0.6)
 
+        # Casquinha específica para pistola
         casing_spawn_offset = vec(15 if self.player.facing_right else -15, -5)
         casing_pos = self.player.position + casing_spawn_offset
-        Casing(self.game, casing_pos, self.player.facing_right)
+        Casing(self.game, casing_pos, self.player.facing_right, weapon_type="pistol")
 
         if self.ammo_in_mag <= 0:
             self.start_reload()
-
+            
     def update(self, dt):
         if self.reloading:
             now = pygame.time.get_ticks()
@@ -93,17 +95,38 @@ class Pistol(Weapon):
     def draw(self, screen, camera):
         now = pygame.time.get_ticks()
         if self.muzzle_flash_timer > 0 and now - self.muzzle_flash_timer < PISTOL_MUZZLE_FLASH_DURATION:
-
+            # Debug para verificar se está funcionando
+            print(f"[DEBUG] Muzzle flash ativo! Timer: {now - self.muzzle_flash_timer}")
+            
             mouse_pos = pygame.mouse.get_pos()
             world_mouse_pos = camera.screen_to_world(mouse_pos)
             direction = vec(world_mouse_pos) - self.player.position
             if direction.length_squared() > 0:
                 direction = direction.normalize()
-                offset_dist = self.player.rect.width * 0.6
+                
+                # Posição do flash ajustada para ser mais visível
+                offset_dist = self.player.rect.width * 0.8
                 flash_pos_world = self.player.position + direction * offset_dist
                 flash_pos_screen = camera.apply_coords(*flash_pos_world)
-
-                flash_radius = PISTOL_MUZZLE_FLASH_SIZE // 2
-                pygame.draw.circle(screen, PISTOL_MUZZLE_FLASH_COLOR, flash_pos_screen, flash_radius)
+                
+                # Desenhar múltiplos círculos para um efeito mais visível
+                flash_radius = PISTOL_MUZZLE_FLASH_SIZE
+                
+                # Flash principal (amarelo brilhante)
+                pygame.draw.circle(screen, (255, 255, 0), 
+                                 (int(flash_pos_screen[0]), int(flash_pos_screen[1])), 
+                                 flash_radius)
+                
+                # Flash interno (branco para brilho)
+                pygame.draw.circle(screen, (255, 255, 255), 
+                                 (int(flash_pos_screen[0]), int(flash_pos_screen[1])), 
+                                 flash_radius // 2)
+                
+                # Flash externo (laranja para realismo)
+                pygame.draw.circle(screen, (255, 165, 0), 
+                                 (int(flash_pos_screen[0]), int(flash_pos_screen[1])), 
+                                 flash_radius + 2)
         else:
-            self.muzzle_flash_timer = 0
+            # Resetar o timer quando o flash termina
+            if self.muzzle_flash_timer > 0:
+                self.muzzle_flash_timer = 0

@@ -282,6 +282,8 @@ class Player(pygame.sprite.Sprite):
 
     def update(self, dt):
 
+        old_position = self.position.copy() if hasattr(self, 'position') else pygame.math.Vector2(0, 0)
+
         if self.mask_buff_active:
             self.mask_buff_timer -= dt
             if self.mask_buff_timer <= 0:
@@ -291,6 +293,13 @@ class Player(pygame.sprite.Sprite):
 
         self.get_keys()
         self.move(dt)
+
+        # Trigger mission event for movement
+        if hasattr(self.game, 'trigger_mission_event') and hasattr(self, 'position'):
+            distance_moved = old_position.distance_to(self.position)
+            if distance_moved > 5:  # Se o jogador se moveu uma distância significativa
+                self.game.trigger_mission_event("reach", "tutorial_area", 1)
+
         self.update_radiation(dt)
         self.pistol.update(dt)
         self.blood_system.update(dt)
